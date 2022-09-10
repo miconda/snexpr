@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-static int status = 0;
 
 static void expr_test_num(char *s, float expected)
 {
@@ -38,7 +37,6 @@ static void expr_test_num(char *s, float expected)
 	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
-		status = 1;
 		return;
 	}
 	struct expr *result = expr_eval(e);
@@ -64,7 +62,6 @@ static void expr_test_num(char *s, float expected)
 	if((isnan(result->param.num.nval) && !isnan(expected))
 			|| fabs(result->param.num.nval - expected) > 0.00001f) {
 		printf("FAIL: %s: %f \t\t!= %f\n", p, result->param.num.nval, expected);
-		status = 1;
 	} else {
 		printf("OK: %s \t\t== %f\n", p, expected);
 	}
@@ -84,7 +81,6 @@ static void expr_test_stz(char *s, char *expected)
 	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
-		status = 1;
 		return;
 	}
 	struct expr *result = expr_eval(e);
@@ -113,7 +109,6 @@ static void expr_test_stz(char *s, char *expected)
 		printf("OK: %s \t\t== \"%s\"\n", p, expected);
 	} else {
 		printf("FAIL: %s: \"%s\" \t\t!= \"%s\"\n", p, result->param.stz.sval, expected);
-		status = 1;
 	}
 
 done:
