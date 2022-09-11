@@ -120,6 +120,68 @@ end:
 }
 
 
+static void expr_test_bool(char *s, int expected)
+{
+	int b = 0;
+	struct expr_var_list vars = {0};
+	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
+	if(e == NULL) {
+		printf("FAIL: %s returned NULL\n", s);
+		return;
+	}
+	struct expr *result = expr_eval(e);
+
+	if(result==NULL) {
+		printf("FAIL: result is NULL\n");
+		goto end;
+	}
+
+	char *p = (char *)malloc(strlen(s) + 1);
+	strncpy(p, s, strlen(s) + 1);
+	for(char *it = p; *it; it++) {
+		if(*it == '\n') {
+			*it = '\\';
+		}
+	}
+
+	if(expected) {
+		expected = 1;
+	} else {
+		expected = 0;
+	}
+
+	if(result->type == OP_CONSTNUM) {
+		if(result->param.num.nval) {
+			b = 1;
+		} else {
+			b = 0;
+		}
+	} else if(result->type == OP_CONSTSTZ) {
+		if(result->param.stz.sval==NULL || strlen(result->param.stz.sval)==0) {
+			b = 0;
+		} else {
+			b = 1;
+		}
+	} else {
+		printf("FAIL: result is UNKNOWN\n");
+		goto done;
+	}
+
+	if(b == expected) {
+		printf("OK: %s \t\t== %s\n", p, expected?"true":"false");
+	} else {
+		printf("FAIL: %s: %f \t\t!= %s\n", p, result->param.num.nval, expected?"true":"false");
+	}
+
+done:
+	expr_result_free(result);
+
+end:
+	expr_destroy(e, &vars);
+	free(p);
+}
+
+
 int main(int argc, char *argv[])
 {
 	expr_test_num("1+\"2\"", 1 + 2);
@@ -140,8 +202,9 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
-	expr_test_num("\"1\" == \"2\"", 0);
-	expr_test_num("(\"abc\" == \"abc\")", 1);
+	expr_test_bool("\"1\" == \"2\"", 0);
+	expr_test_bool("\"12\" == \"1\" + 2", 1);
+	expr_test_bool("(\"abc\" == \"abc\")", 1);
 
 	return 0;
 }
