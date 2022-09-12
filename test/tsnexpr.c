@@ -33,6 +33,7 @@
 
 static void snexpr_test_num(char *s, float expected)
 {
+	char *p = NULL;
 	struct snexpr_var_list vars = {0};
 	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
@@ -52,7 +53,7 @@ static void snexpr_test_num(char *s, float expected)
 		goto done;
 	}
 
-	char *p = (char *)malloc(strlen(s) + 1);
+	p = (char *)malloc(strlen(s) + 1);
 	strncpy(p, s, strlen(s) + 1);
 	for(char *it = p; *it; it++) {
 		if(*it == '\n') {
@@ -72,12 +73,13 @@ done:
 
 end:
 	snexpr_destroy(e, &vars);
-	free(p);
+	if(p) free(p);
 }
 
 
 static void snexpr_test_stz(char *s, char *expected)
 {
+	char *p = NULL;
 	struct snexpr_var_list vars = {0};
 	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
@@ -97,7 +99,7 @@ static void snexpr_test_stz(char *s, char *expected)
 		goto done;
 	}
 
-	char *p = (char *)malloc(strlen(s) + 1);
+	p = (char *)malloc(strlen(s) + 1);
 	strncpy(p, s, strlen(s) + 1);
 	for(char *it = p; *it; it++) {
 		if(*it == '\n') {
@@ -117,12 +119,13 @@ done:
 
 end:
 	snexpr_destroy(e, &vars);
-	free(p);
+	if(p) free(p);
 }
 
 
 static void snexpr_test_bool(char *s, int expected)
 {
+	char *p = NULL;
 	int b = 0;
 	struct snexpr_var_list vars = {0};
 	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
@@ -137,7 +140,7 @@ static void snexpr_test_bool(char *s, int expected)
 		goto end;
 	}
 
-	char *p = (char *)malloc(strlen(s) + 1);
+	p = (char *)malloc(strlen(s) + 1);
 	strncpy(p, s, strlen(s) + 1);
 	for(char *it = p; *it; it++) {
 		if(*it == '\n') {
@@ -179,7 +182,7 @@ done:
 
 end:
 	snexpr_destroy(e, &vars);
-	free(p);
+	if(p) free(p);
 }
 
 
