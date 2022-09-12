@@ -403,7 +403,7 @@ static struct snexpr *snexpr_convert_num(float value, unsigned int ctype)
 static struct snexpr *snexpr_convert_stz(char *value, unsigned int ctype)
 {
 	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
-	if(e == NULL) {
+	if(e == NULL || value==NULL) {
 		return NULL;
 	}
 	memset(e, 0, sizeof(struct snexpr));
@@ -701,12 +701,12 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 						free(e->param.op.args.buf[0].param.var.vref->v.sval);
 						e->param.op.args.buf[0].param.var.vref->v.sval = NULL;
 					}
-					e->param.op.args.buf[0].param.var.vref->evflags &= ~SNEXPR_VALALLOC;
+					e->param.op.args.buf[0].param.var.vref->evflags &= ~(SNEXPR_TSTRING|SNEXPR_VALALLOC);
 				}
 				if(rv1->type == SNE_OP_CONSTSTZ) {
 					e->param.op.args.buf[0].param.var.vref->v.sval = strdup(rv1->param.stz.sval);
-					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_VALALLOC;
-					lv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM);
+					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_TSTRING|SNEXPR_VALALLOC;
+					lv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTSTZ);
 				} else {
 					n = rv1->param.num.nval;
 					e->param.op.args.buf[0].param.var.vref->v.nval = n;
@@ -717,7 +717,11 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 		case SNE_OP_COMMA:
 			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
 			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
-			lv = snexpr_convert_num(rv1->param.num.nval, SNE_OP_CONSTNUM);
+			if(rv1->type == SNE_OP_CONSTSTZ) {
+				lv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTSTZ);
+			} else {
+				lv = snexpr_convert_num(rv1->param.num.nval, SNE_OP_CONSTNUM);
+			}
 			goto done;
 		case SNE_OP_CONSTNUM:
 			lv = snexpr_convert_num(e->param.num.nval, SNE_OP_CONSTNUM);
@@ -726,7 +730,11 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 			lv = snexpr_convert_stz(e->param.stz.sval, SNE_OP_CONSTSTZ);
 			goto done;
 		case SNE_OP_VAR:
-			lv = snexpr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
+			if(e->param.var.vref->evflags & SNEXPR_TSTRING) {
+				lv = snexpr_convert_stz(e->param.var.vref->v.sval, SNE_OP_CONSTSTZ);
+			} else {
+				lv = snexpr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
+			}
 			goto done;
 		case SNE_OP_FUNC:
 			lv = snexpr_convert_num(
