@@ -451,12 +451,12 @@ static void snexpr_result_free(struct snexpr *e)
 	if(e == NULL) {
 		return;
 	}
-	if(!(e->eflags & SNEXPR_EXPALLOC)) {
-		return;
-	}
 	if((e->eflags & SNEXPR_VALALLOC) && (e->type == SNE_OP_CONSTSTZ)
 			&& (e->param.stz.sval != NULL)) {
 		free(e->param.stz.sval);
+	}
+	if(!(e->eflags & SNEXPR_EXPALLOC)) {
+		return;
 	}
 	free(e);
 }
