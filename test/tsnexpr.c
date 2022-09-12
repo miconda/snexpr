@@ -46,7 +46,7 @@ static void expr_test_num(char *s, float expected)
 		goto end;
 	}
 
-	if(result->type != OP_CONSTNUM) {
+	if(result->type != SNE_OP_CONSTNUM) {
 		printf("FAIL: result is not a number (%d)\n", result->type);
 		goto done;
 	}
@@ -90,7 +90,7 @@ static void expr_test_stz(char *s, char *expected)
 		goto end;
 	}
 
-	if(result->type != OP_CONSTSTZ || result->param.stz.sval == NULL) {
+	if(result->type != SNE_OP_CONSTSTZ || result->param.stz.sval == NULL) {
 		printf("FAIL: result is not a string (%d/%p)\n",
 				result->type, result->param.stz.sval);
 		goto done;
@@ -150,13 +150,13 @@ static void expr_test_bool(char *s, int expected)
 		expected = 0;
 	}
 
-	if(result->type == OP_CONSTNUM) {
+	if(result->type == SNE_OP_CONSTNUM) {
 		if(result->param.num.nval) {
 			b = 1;
 		} else {
 			b = 0;
 		}
-	} else if(result->type == OP_CONSTSTZ) {
+	} else if(result->type == SNE_OP_CONSTSTZ) {
 		if(result->param.stz.sval==NULL || strlen(result->param.stz.sval)==0) {
 			b = 0;
 		} else {

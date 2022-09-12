@@ -102,43 +102,43 @@ struct expr_var;
 
 enum expr_type
 {
-	OP_UNKNOWN,
-	OP_UNARY_MINUS,
-	OP_UNARY_LOGICAL_NOT,
-	OP_UNARY_BITWISE_NOT,
+	SNE_OP_UNKNOWN,
+	SNE_OP_UNARY_MINUS,
+	SNE_OP_UNARY_LOGICAL_NOT,
+	SNE_OP_UNARY_BITWISE_NOT,
 
-	OP_POWER,
-	OP_DIVIDE,
-	OP_MULTIPLY,
-	OP_REMAINDER,
+	SNE_OP_POWER,
+	SNE_OP_DIVIDE,
+	SNE_OP_MULTIPLY,
+	SNE_OP_REMAINDER,
 
-	OP_PLUS,
-	OP_MINUS,
+	SNE_OP_PLUS,
+	SNE_OP_MINUS,
 
-	OP_SHL,
-	OP_SHR,
+	SNE_OP_SHL,
+	SNE_OP_SHR,
 
-	OP_LT,
-	OP_LE,
-	OP_GT,
-	OP_GE,
-	OP_EQ,
-	OP_NE,
+	SNE_OP_LT,
+	SNE_OP_LE,
+	SNE_OP_GT,
+	SNE_OP_GE,
+	SNE_OP_EQ,
+	SNE_OP_NE,
 
-	OP_BITWISE_AND,
-	OP_BITWISE_OR,
-	OP_BITWISE_XOR,
+	SNE_OP_BITWISE_AND,
+	SNE_OP_BITWISE_OR,
+	SNE_OP_BITWISE_XOR,
 
-	OP_LOGICAL_AND,
-	OP_LOGICAL_OR,
+	SNE_OP_LOGICAL_AND,
+	SNE_OP_LOGICAL_OR,
 
-	OP_ASSIGN,
-	OP_COMMA,
+	SNE_OP_ASSIGN,
+	SNE_OP_COMMA,
 
-	OP_CONSTNUM,
-	OP_CONSTSTZ,
-	OP_VAR,
-	OP_FUNC,
+	SNE_OP_CONSTNUM,
+	SNE_OP_CONSTSTZ,
+	SNE_OP_VAR,
+	SNE_OP_FUNC,
 };
 
 static int prec[] = {0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 6, 7,
@@ -201,20 +201,20 @@ typedef vec(struct expr_arg) vec_arg_t;
 
 static int expr_is_unary(enum expr_type op)
 {
-	return op == OP_UNARY_MINUS || op == OP_UNARY_LOGICAL_NOT
-		   || op == OP_UNARY_BITWISE_NOT;
+	return op == SNE_OP_UNARY_MINUS || op == SNE_OP_UNARY_LOGICAL_NOT
+		   || op == SNE_OP_UNARY_BITWISE_NOT;
 }
 
 static int expr_is_binary(enum expr_type op)
 {
-	return !expr_is_unary(op) && op != OP_CONSTNUM && op != OP_VAR
-		   && op != OP_FUNC && op != OP_UNKNOWN;
+	return !expr_is_unary(op) && op != SNE_OP_CONSTNUM && op != SNE_OP_VAR
+		   && op != SNE_OP_FUNC && op != SNE_OP_UNKNOWN;
 }
 
 static int expr_prec(enum expr_type a, enum expr_type b)
 {
-	int left = expr_is_binary(a) && a != OP_ASSIGN && a != OP_POWER
-			   && a != OP_COMMA;
+	int left = expr_is_binary(a) && a != SNE_OP_ASSIGN && a != SNE_OP_POWER
+			   && a != SNE_OP_COMMA;
 	return (left && prec[a] >= prec[b]) || (prec[a] > prec[b]);
 }
 
@@ -229,36 +229,36 @@ static struct
 	const char *s;
 	const enum expr_type op;
 } OPS[] = {
-		{"-u", OP_UNARY_MINUS},
-		{"!u", OP_UNARY_LOGICAL_NOT},
-		{"^u", OP_UNARY_BITWISE_NOT},
-		{"**", OP_POWER},
-		{"*", OP_MULTIPLY},
-		{"/", OP_DIVIDE},
-		{"%", OP_REMAINDER},
-		{"+", OP_PLUS},
-		{"-", OP_MINUS},
-		{"<<", OP_SHL},
-		{">>", OP_SHR},
-		{"<", OP_LT},
-		{"<=", OP_LE},
-		{">", OP_GT},
-		{">=", OP_GE},
-		{"==", OP_EQ},
-		{"!=", OP_NE},
-		{"&", OP_BITWISE_AND},
-		{"|", OP_BITWISE_OR},
-		{"^", OP_BITWISE_XOR},
-		{"&&", OP_LOGICAL_AND},
-		{"||", OP_LOGICAL_OR},
-		{"=", OP_ASSIGN},
-		{",", OP_COMMA},
+		{"-u", SNE_OP_UNARY_MINUS},
+		{"!u", SNE_OP_UNARY_LOGICAL_NOT},
+		{"^u", SNE_OP_UNARY_BITWISE_NOT},
+		{"**", SNE_OP_POWER},
+		{"*", SNE_OP_MULTIPLY},
+		{"/", SNE_OP_DIVIDE},
+		{"%", SNE_OP_REMAINDER},
+		{"+", SNE_OP_PLUS},
+		{"-", SNE_OP_MINUS},
+		{"<<", SNE_OP_SHL},
+		{">>", SNE_OP_SHR},
+		{"<", SNE_OP_LT},
+		{"<=", SNE_OP_LE},
+		{">", SNE_OP_GT},
+		{">=", SNE_OP_GE},
+		{"==", SNE_OP_EQ},
+		{"!=", SNE_OP_NE},
+		{"&", SNE_OP_BITWISE_AND},
+		{"|", SNE_OP_BITWISE_OR},
+		{"^", SNE_OP_BITWISE_XOR},
+		{"&&", SNE_OP_LOGICAL_AND},
+		{"||", SNE_OP_LOGICAL_OR},
+		{"=", SNE_OP_ASSIGN},
+		{",", SNE_OP_COMMA},
 
 		/* These are used by lexer and must be ignored by parser, so we put
        them at the end */
-		{"-", OP_UNARY_MINUS},
-		{"!", OP_UNARY_LOGICAL_NOT},
-		{"^", OP_UNARY_BITWISE_NOT},
+		{"-", SNE_OP_UNARY_MINUS},
+		{"!", SNE_OP_UNARY_LOGICAL_NOT},
+		{"^", SNE_OP_UNARY_BITWISE_NOT},
 };
 
 static enum expr_type expr_op(const char *s, size_t len, int unary)
@@ -269,7 +269,7 @@ static enum expr_type expr_op(const char *s, size_t len, int unary)
 			return OPS[i].op;
 		}
 	}
-	return OP_UNKNOWN;
+	return SNE_OP_UNKNOWN;
 }
 
 static float expr_parse_number(const char *s, size_t len)
@@ -386,15 +386,15 @@ static struct expr *expr_convert_num(float value, unsigned int ctype)
 	}
 	memset(e, 0, sizeof(struct expr));
 
-	if(ctype == OP_CONSTSTZ) {
+	if(ctype == SNE_OP_CONSTSTZ) {
 		e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
-		e->type = OP_CONSTSTZ;
+		e->type = SNE_OP_CONSTSTZ;
 		asprintf(&e->param.stz.sval, "%g", value);
 		return e;
 	}
 
 	e->eflags |= EXPR_EXPALLOC;
-	e->type = OP_CONSTNUM;
+	e->type = SNE_OP_CONSTNUM;
 	e->param.num.nval = value;
 	return e;
 }
@@ -407,9 +407,9 @@ static struct expr *expr_convert_stz(char *value, unsigned int ctype)
 	}
 	memset(e, 0, sizeof(struct expr));
 
-	if(ctype == OP_CONSTNUM) {
+	if(ctype == SNE_OP_CONSTNUM) {
 		e->eflags |= EXPR_EXPALLOC;
-		e->type = OP_CONSTNUM;
+		e->type = SNE_OP_CONSTNUM;
 		e->param.num.nval = (float)atof(value);
 		return e;
 	}
@@ -420,7 +420,7 @@ static struct expr *expr_convert_stz(char *value, unsigned int ctype)
 		return NULL;
 	}
 	e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
-	e->type = OP_CONSTSTZ;
+	e->type = SNE_OP_CONSTSTZ;
 	strcpy(e->param.stz.sval, value);
 	return e;
 }
@@ -439,7 +439,7 @@ static struct expr *expr_concat_strz(char *value0, char *value1)
 		return NULL;
 	}
 	e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
-	e->type = OP_CONSTSTZ;
+	e->type = SNE_OP_CONSTSTZ;
 	strcpy(e->param.stz.sval, value0);
 	strcat(e->param.stz.sval, value1);
 	return e;
@@ -453,7 +453,7 @@ static void expr_result_free(struct expr *e)
 	if(!(e->eflags & EXPR_EXPALLOC)) {
 		return;
 	}
-	if((e->eflags & EXPR_VALALLOC) && (e->type == OP_CONSTSTZ)
+	if((e->eflags & EXPR_VALALLOC) && (e->type == SNE_OP_CONSTSTZ)
 			&& (e->param.stz.sval != NULL)) {
 		free(e->param.stz.sval);
 	}
@@ -474,33 +474,33 @@ static void expr_result_free(struct expr *e)
 
 #define expr_eval_cmp(_CMPOP_) do { \
 			rv0 = expr_eval(&e->param.op.args.buf[0]); \
-			expr_eval_check_null(rv0, OP_CONSTNUM); \
+			expr_eval_check_null(rv0, SNE_OP_CONSTNUM); \
 			rv1 = expr_eval(&e->param.op.args.buf[1]); \
-			expr_eval_check_null(rv1, OP_CONSTNUM); \
-			if(rv0->type == OP_CONSTSTZ) { \
+			expr_eval_check_null(rv1, SNE_OP_CONSTNUM); \
+			if(rv0->type == SNE_OP_CONSTSTZ) { \
 				/* string comparison */ \
-				if(rv1->type == OP_CONSTNUM) { \
-					tv = expr_convert_num(rv1->param.num.nval, OP_CONSTSTZ); \
+				if(rv1->type == SNE_OP_CONSTNUM) { \
+					tv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ); \
 					expr_result_free(rv1); \
 					rv1 = tv; \
-					expr_eval_check_val(rv1, OP_CONSTSTZ); \
+					expr_eval_check_val(rv1, SNE_OP_CONSTSTZ); \
 				} \
 				lv = expr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval); \
 				if(strcmp(rv0->param.stz.sval, rv1->param.stz.sval) _CMPOP_ 0) { \
-					lv = expr_convert_num(1, OP_CONSTNUM); \
+					lv = expr_convert_num(1, SNE_OP_CONSTNUM); \
 				} else { \
-					lv = expr_convert_num(0, OP_CONSTNUM); \
+					lv = expr_convert_num(0, SNE_OP_CONSTNUM); \
 				} \
 			} else { \
 				/* number comparison */ \
-				if(rv1->type == OP_CONSTSTZ) { \
-					tv = expr_convert_stz(rv1->param.stz.sval, OP_CONSTNUM); \
+				if(rv1->type == SNE_OP_CONSTSTZ) { \
+					tv = expr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM); \
 					expr_result_free(rv1); \
 					rv1 = tv; \
-					expr_eval_check_val(rv1, OP_CONSTNUM); \
+					expr_eval_check_val(rv1, SNE_OP_CONSTNUM); \
 				} \
 				lv = expr_convert_num( \
-						rv0->param.num.nval _CMPOP_ rv1->param.num.nval, OP_CONSTNUM); \
+						rv0->param.num.nval _CMPOP_ rv1->param.num.nval, SNE_OP_CONSTNUM); \
 			} \
 	} while(0)
 
@@ -513,214 +513,214 @@ static struct expr *expr_eval(struct expr *e)
 	struct expr *tv = NULL;
 
 	switch(e->type) {
-		case OP_UNARY_MINUS:
+		case SNE_OP_UNARY_MINUS:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
-			lv = expr_convert_num(-(rv0->param.num.nval), OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = expr_convert_num(-(rv0->param.num.nval), SNE_OP_CONSTNUM);
 			goto done;
-		case OP_UNARY_LOGICAL_NOT:
+		case SNE_OP_UNARY_LOGICAL_NOT:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
-			lv = expr_convert_num(!(rv0->param.num.nval), OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = expr_convert_num(!(rv0->param.num.nval), SNE_OP_CONSTNUM);
 			goto done;
-		case OP_UNARY_BITWISE_NOT:
+		case SNE_OP_UNARY_BITWISE_NOT:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
-			lv = expr_convert_num(~(to_int(rv0->param.num.nval)), OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = expr_convert_num(~(to_int(rv0->param.num.nval)), SNE_OP_CONSTNUM);
 			goto done;
-		case OP_POWER:
+		case SNE_OP_POWER:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					powf(rv0->param.num.nval, rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_MULTIPLY:
+		case SNE_OP_MULTIPLY:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
-					rv0->param.num.nval * rv1->param.num.nval, OP_CONSTNUM);
+					rv0->param.num.nval * rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_DIVIDE:
+		case SNE_OP_DIVIDE:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			if(rv1->param.num.nval == 0) {
 				goto error;
 			}
 			lv = expr_convert_num(
-					rv0->param.num.nval / rv1->param.num.nval, OP_CONSTNUM);
+					rv0->param.num.nval / rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_REMAINDER:
+		case SNE_OP_REMAINDER:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					fmodf(rv0->param.num.nval, rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_PLUS:
+		case SNE_OP_PLUS:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_null(rv0, OP_CONSTNUM);
+			expr_eval_check_null(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_null(rv1, OP_CONSTNUM);
-			if(rv0->type == OP_CONSTSTZ) {
+			expr_eval_check_null(rv1, SNE_OP_CONSTNUM);
+			if(rv0->type == SNE_OP_CONSTSTZ) {
 				/* string concatenation */
-				if(rv1->type == OP_CONSTNUM) {
-					tv = expr_convert_num(rv1->param.num.nval, OP_CONSTSTZ);
+				if(rv1->type == SNE_OP_CONSTNUM) {
+					tv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ);
 					expr_result_free(rv1);
 					rv1 = tv;
-					expr_eval_check_val(rv1, OP_CONSTSTZ);
+					expr_eval_check_val(rv1, SNE_OP_CONSTSTZ);
 				}
 				lv = expr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval);
 			} else {
 				/* add */
-				if(rv1->type == OP_CONSTSTZ) {
-					tv = expr_convert_stz(rv1->param.stz.sval, OP_CONSTNUM);
+				if(rv1->type == SNE_OP_CONSTSTZ) {
+					tv = expr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM);
 					expr_result_free(rv1);
 					rv1 = tv;
-					expr_eval_check_val(rv1, OP_CONSTNUM);
+					expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 				}
 				lv = expr_convert_num(
-						rv0->param.num.nval + rv1->param.num.nval, OP_CONSTNUM);
+						rv0->param.num.nval + rv1->param.num.nval, SNE_OP_CONSTNUM);
 			}
 			goto done;
-		case OP_MINUS:
+		case SNE_OP_MINUS:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
-					rv0->param.num.nval - rv1->param.num.nval, OP_CONSTNUM);
+					rv0->param.num.nval - rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_SHL:
+		case SNE_OP_SHL:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					to_int(rv0->param.num.nval) << to_int(rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_SHR:
+		case SNE_OP_SHR:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					to_int(rv0->param.num.nval) >> to_int(rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_LT:
+		case SNE_OP_LT:
 			expr_eval_cmp(<);
 			goto done;
-		case OP_LE:
+		case SNE_OP_LE:
 			expr_eval_cmp(<=);
 			goto done;
-		case OP_GT:
+		case SNE_OP_GT:
 			expr_eval_cmp(>);
 			goto done;
-		case OP_GE:
+		case SNE_OP_GE:
 			expr_eval_cmp(>=);
 			goto done;
-		case OP_EQ:
+		case SNE_OP_EQ:
 			expr_eval_cmp(==);
 			goto done;
-		case OP_NE:
+		case SNE_OP_NE:
 			expr_eval_cmp(!=);
 			goto done;
-		case OP_BITWISE_AND:
+		case SNE_OP_BITWISE_AND:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					to_int(rv0->param.num.nval) & to_int(rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_BITWISE_OR:
+		case SNE_OP_BITWISE_OR:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					to_int(rv0->param.num.nval) | to_int(rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_BITWISE_XOR:
+		case SNE_OP_BITWISE_XOR:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, OP_CONSTNUM);
+			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, OP_CONSTNUM);
+			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			lv = expr_convert_num(
 					to_int(rv0->param.num.nval) ^ to_int(rv1->param.num.nval),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
-		case OP_LOGICAL_AND:
+		case SNE_OP_LOGICAL_AND:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
 			n = rv0->param.num.nval;
 			if(n != 0) {
 				rv1 = expr_eval(&e->param.op.args.buf[1]);
 				n = rv1->param.num.nval;
 				if(n != 0) {
-					lv = expr_convert_num(n, OP_CONSTNUM);
+					lv = expr_convert_num(n, SNE_OP_CONSTNUM);
 					goto done;
 				}
 			}
-			lv = expr_convert_num(0, OP_CONSTNUM);
+			lv = expr_convert_num(0, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_LOGICAL_OR:
+		case SNE_OP_LOGICAL_OR:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
 			n = rv0->param.num.nval;
 			if(n != 0 && !isnan(n)) {
-				lv = expr_convert_num(n, OP_CONSTNUM);
+				lv = expr_convert_num(n, SNE_OP_CONSTNUM);
 				goto done;
 			} else {
 				rv1 = expr_eval(&e->param.op.args.buf[1]);
 				n = rv1->param.num.nval;
 				if(n != 0) {
-					lv = expr_convert_num(n, OP_CONSTNUM);
+					lv = expr_convert_num(n, SNE_OP_CONSTNUM);
 					goto done;
 				}
 			}
-			lv = expr_convert_num(0, OP_CONSTNUM);
+			lv = expr_convert_num(0, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_ASSIGN:
+		case SNE_OP_ASSIGN:
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
 			n = rv1->param.num.nval;
-			if(vec_nth(&e->param.op.args, 0).type == OP_VAR) {
+			if(vec_nth(&e->param.op.args, 0).type == SNE_OP_VAR) {
 				e->param.op.args.buf[0].param.var.vref->v.nval = n;
 			}
-			lv = expr_convert_num(n, OP_CONSTNUM);
+			lv = expr_convert_num(n, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_COMMA:
+		case SNE_OP_COMMA:
 			rv0 = expr_eval(&e->param.op.args.buf[0]);
 			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			lv = expr_convert_num(rv1->param.num.nval, OP_CONSTNUM);
+			lv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_CONSTNUM:
-			lv = expr_convert_num(e->param.num.nval, OP_CONSTNUM);
+		case SNE_OP_CONSTNUM:
+			lv = expr_convert_num(e->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_CONSTSTZ:
-			lv = expr_convert_stz(e->param.stz.sval, OP_CONSTSTZ);
+		case SNE_OP_CONSTSTZ:
+			lv = expr_convert_stz(e->param.stz.sval, SNE_OP_CONSTSTZ);
 			goto done;
-		case OP_VAR:
-			lv = expr_convert_num(e->param.var.vref->v.nval, OP_CONSTNUM);
+		case SNE_OP_VAR:
+			lv = expr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
 			goto done;
-		case OP_FUNC:
+		case SNE_OP_FUNC:
 			lv = expr_convert_num(
 					e->param.func.f->f(e->param.func.f, &e->param.func.args,
 							e->param.func.context),
-					OP_CONSTNUM);
+					SNE_OP_CONSTNUM);
 			goto done;
 		default:
-			lv = expr_convert_num(NAN, OP_CONSTNUM);
+			lv = expr_convert_num(NAN, SNE_OP_CONSTNUM);
 			goto done;
 	}
 
@@ -821,7 +821,7 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 		return 1;
 	} else {
 		if((*flags & EXPR_TOP) == 0) {
-			if(expr_op(&c, 1, 1) == OP_UNKNOWN) {
+			if(expr_op(&c, 1, 1) == SNE_OP_UNKNOWN) {
 				return -4; // missing expected operand
 			}
 			*flags = EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD | EXPR_TOPEN
@@ -831,7 +831,7 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 			int found = 0;
 			while(!isvarchr(c) && !isspace(c) && c != '(' && c != ')'
 					&& i < len) {
-				if(expr_op(s, i + 1, 0) != OP_UNKNOWN) {
+				if(expr_op(s, i + 1, 0) != SNE_OP_UNKNOWN) {
 					found = 1;
 				} else if(found) {
 					break;
@@ -855,7 +855,7 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 static int expr_bind(const char *s, size_t len, vec_expr_t *es)
 {
 	enum expr_type op = expr_op(s, len, -1);
-	if(op == OP_UNKNOWN) {
+	if(op == SNE_OP_UNKNOWN) {
 		return -1;
 	}
 
@@ -876,7 +876,7 @@ static int expr_bind(const char *s, size_t len, vec_expr_t *es)
 		struct expr a = vec_pop(es);
 		struct expr binary = expr_init();
 		binary.type = op;
-		if(op == OP_ASSIGN && a.type != OP_VAR) {
+		if(op == SNE_OP_ASSIGN && a.type != SNE_OP_VAR) {
 			return -1; /* Bad assignment */
 		}
 		vec_push(&binary.param.op.args, a);
@@ -889,7 +889,7 @@ static int expr_bind(const char *s, size_t len, vec_expr_t *es)
 static struct expr expr_constnum(float value)
 {
 	struct expr e = expr_init();
-	e.type = OP_CONSTNUM;
+	e.type = SNE_OP_CONSTNUM;
 	e.param.num.nval = value;
 	return e;
 }
@@ -897,7 +897,7 @@ static struct expr expr_constnum(float value)
 static struct expr expr_varref(struct expr_var *v)
 {
 	struct expr e = expr_init();
-	e.type = OP_VAR;
+	e.type = SNE_OP_VAR;
 	e.param.var.vref = v;
 	return e;
 }
@@ -911,7 +911,7 @@ static struct expr expr_conststr(const char *value, int len)
 		/* skip the quotes */
 		len -= 2;
 	}
-	e.type = OP_CONSTSTZ;
+	e.type = SNE_OP_CONSTSTZ;
 	e.param.stz.sval = malloc(len + 1);
 	if(e.param.stz.sval) {
 		if(len > 0) {
@@ -940,7 +940,7 @@ static inline void expr_copy(struct expr *dst, struct expr *src)
 	int i;
 	struct expr arg;
 	dst->type = src->type;
-	if(src->type == OP_FUNC) {
+	if(src->type == SNE_OP_FUNC) {
 		dst->param.func.f = src->param.func.f;
 		vec_foreach(&src->param.func.args, arg, i)
 		{
@@ -951,9 +951,9 @@ static inline void expr_copy(struct expr *dst, struct expr *src)
 		if(src->param.func.f->ctxsz > 0) {
 			dst->param.func.context = calloc(1, src->param.func.f->ctxsz);
 		}
-	} else if(src->type == OP_CONSTNUM) {
+	} else if(src->type == SNE_OP_CONSTNUM) {
 		dst->param.num.nval = src->param.num.nval;
-	} else if(src->type == OP_VAR) {
+	} else if(src->type == SNE_OP_VAR) {
 		dst->param.var.vref = src->param.var.vref;
 	} else {
 		vec_foreach(&src->param.op.args, arg, i)
@@ -1098,7 +1098,7 @@ static struct expr *expr_create(const char *s, size_t len,
 						goto cleanup; /* too few arguments for $() function */
 					}
 					struct expr *u = &vec_nth(&arg.args, 0);
-					if(u->type != OP_VAR) {
+					if(u->type != SNE_OP_VAR) {
 						vec_free(&arg.args);
 						goto cleanup; /* first argument is not a variable */
 					}
@@ -1134,15 +1134,15 @@ static struct expr *expr_create(const char *s, size_t len,
 									expr_var(vars, varname, strlen(varname));
 							struct expr ev = expr_varref(v);
 							struct expr assign = expr_binary(
-									OP_ASSIGN, ev, vec_nth(&arg.args, j));
+									SNE_OP_ASSIGN, ev, vec_nth(&arg.args, j));
 							*p = expr_binary(
-									OP_COMMA, assign, expr_constnum(0));
+									SNE_OP_COMMA, assign, expr_constnum(0));
 							p = &vec_nth(&p->param.op.args, 1);
 						}
 						/* Expand macro body */
 						for(int j = 1; j < vec_len(&m.body); j++) {
 							if(j < vec_len(&m.body) - 1) {
-								*p = expr_binary(OP_COMMA, expr_constnum(0),
+								*p = expr_binary(SNE_OP_COMMA, expr_constnum(0),
 										expr_constnum(0));
 								expr_copy(&vec_nth(&p->param.op.args, 0),
 										&vec_nth(&m.body, j));
@@ -1156,7 +1156,7 @@ static struct expr *expr_create(const char *s, size_t len,
 					} else {
 						struct expr_func *f = expr_func(funcs, str.s, str.n);
 						struct expr bound_func = expr_init();
-						bound_func.type = OP_FUNC;
+						bound_func.type = SNE_OP_FUNC;
 						bound_func.param.func.f = f;
 						bound_func.param.func.args = arg.args;
 						if(f->ctxsz > 0) {
@@ -1177,7 +1177,7 @@ static struct expr *expr_create(const char *s, size_t len,
 		} else if(*tok == '"' || *tok == '\'') {
 			vec_push(&es, expr_conststr(tok, n));
 			paren_next = EXPR_PAREN_FORBIDDEN;
-		} else if(expr_op(tok, n, -1) != OP_UNKNOWN) {
+		} else if(expr_op(tok, n, -1) != SNE_OP_UNKNOWN) {
 			enum expr_type op = expr_op(tok, n, -1);
 			struct expr_string o2 = {NULL, 0};
 			if(vec_len(&os) > 0) {
@@ -1193,7 +1193,7 @@ static struct expr *expr_create(const char *s, size_t len,
 					}
 				}
 				enum expr_type type2 = expr_op(o2.s, o2.n, -1);
-				if(!(type2 != OP_UNKNOWN && expr_prec(op, type2))) {
+				if(!(type2 != SNE_OP_UNKNOWN && expr_prec(op, type2))) {
 					struct expr_string str = {tok, n};
 					vec_push(&os, str);
 					break;
@@ -1238,7 +1238,7 @@ static struct expr *expr_create(const char *s, size_t len,
 	result = (struct expr *)calloc(1, sizeof(struct expr));
 	if(result != NULL) {
 		if(vec_len(&es) == 0) {
-			result->type = OP_CONSTNUM;
+			result->type = SNE_OP_CONSTNUM;
 		} else {
 			*result = vec_pop(&es);
 		}
@@ -1285,7 +1285,7 @@ static void expr_destroy_args(struct expr *e)
 {
 	int i;
 	struct expr arg;
-	if(e->type == OP_FUNC) {
+	if(e->type == SNE_OP_FUNC) {
 		vec_foreach(&e->param.func.args, arg, i)
 		{
 			expr_destroy_args(&arg);
@@ -1298,7 +1298,7 @@ static void expr_destroy_args(struct expr *e)
 			}
 			free(e->param.func.context);
 		}
-	} else if(e->type != OP_CONSTNUM && e->type != OP_VAR) {
+	} else if(e->type != SNE_OP_CONSTNUM && e->type != SNE_OP_VAR) {
 		vec_foreach(&e->param.op.args, arg, i)
 		{
 			expr_destroy_args(&arg);
