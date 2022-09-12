@@ -37,18 +37,18 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#define EXPR_TOP (1 << 0)
-#define EXPR_TOPEN (1 << 1)
-#define EXPR_TCLOSE (1 << 2)
-#define EXPR_TNUMBER (1 << 3)
-#define EXPR_TSTRING (1 << 4)
-#define EXPR_TWORD (1 << 5)
-#define EXPR_TDEFAULT (EXPR_TOPEN | EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD)
+#define SNEXPR_TOP (1 << 0)
+#define SNEXPR_TOPEN (1 << 1)
+#define SNEXPR_TCLOSE (1 << 2)
+#define SNEXPR_TNUMBER (1 << 3)
+#define SNEXPR_TSTRING (1 << 4)
+#define SNEXPR_TWORD (1 << 5)
+#define SNEXPR_TDEFAULT (SNEXPR_TOPEN | SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD)
 
-#define EXPR_UNARY (1 << 16)
-#define EXPR_COMMA (1 << 17)
-#define EXPR_EXPALLOC (1 << 18)
-#define EXPR_VALALLOC (1 << 19)
+#define SNEXPR_UNARY (1 << 16)
+#define SNEXPR_COMMA (1 << 17)
+#define SNEXPR_EXPALLOC (1 << 18)
+#define SNEXPR_VALALLOC (1 << 19)
 
 
 /*
@@ -387,13 +387,13 @@ static struct expr *expr_convert_num(float value, unsigned int ctype)
 	memset(e, 0, sizeof(struct expr));
 
 	if(ctype == SNE_OP_CONSTSTZ) {
-		e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
+		e->eflags |= SNEXPR_EXPALLOC | SNEXPR_VALALLOC;
 		e->type = SNE_OP_CONSTSTZ;
 		asprintf(&e->param.stz.sval, "%g", value);
 		return e;
 	}
 
-	e->eflags |= EXPR_EXPALLOC;
+	e->eflags |= SNEXPR_EXPALLOC;
 	e->type = SNE_OP_CONSTNUM;
 	e->param.num.nval = value;
 	return e;
@@ -408,7 +408,7 @@ static struct expr *expr_convert_stz(char *value, unsigned int ctype)
 	memset(e, 0, sizeof(struct expr));
 
 	if(ctype == SNE_OP_CONSTNUM) {
-		e->eflags |= EXPR_EXPALLOC;
+		e->eflags |= SNEXPR_EXPALLOC;
 		e->type = SNE_OP_CONSTNUM;
 		e->param.num.nval = (float)atof(value);
 		return e;
@@ -419,7 +419,7 @@ static struct expr *expr_convert_stz(char *value, unsigned int ctype)
 		free(e);
 		return NULL;
 	}
-	e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
+	e->eflags |= SNEXPR_EXPALLOC | SNEXPR_VALALLOC;
 	e->type = SNE_OP_CONSTSTZ;
 	strcpy(e->param.stz.sval, value);
 	return e;
@@ -438,7 +438,7 @@ static struct expr *expr_concat_strz(char *value0, char *value1)
 		free(e);
 		return NULL;
 	}
-	e->eflags |= EXPR_EXPALLOC | EXPR_VALALLOC;
+	e->eflags |= SNEXPR_EXPALLOC | SNEXPR_VALALLOC;
 	e->type = SNE_OP_CONSTSTZ;
 	strcpy(e->param.stz.sval, value0);
 	strcat(e->param.stz.sval, value1);
@@ -450,10 +450,10 @@ static void expr_result_free(struct expr *e)
 	if(e == NULL) {
 		return;
 	}
-	if(!(e->eflags & EXPR_EXPALLOC)) {
+	if(!(e->eflags & SNEXPR_EXPALLOC)) {
 		return;
 	}
-	if((e->eflags & EXPR_VALALLOC) && (e->type == SNE_OP_CONSTSTZ)
+	if((e->eflags & SNEXPR_VALALLOC) && (e->type == SNE_OP_CONSTSTZ)
 			&& (e->param.stz.sval != NULL)) {
 		free(e->param.stz.sval);
 	}
@@ -759,12 +759,12 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 	} else if(c == '\n') {
 		for(; i < len && isspace(s[i]); i++)
 			;
-		if(*flags & EXPR_TOP) {
+		if(*flags & SNEXPR_TOP) {
 			if(i == len || s[i] == ')') {
-				*flags = *flags & (~EXPR_COMMA);
+				*flags = *flags & (~SNEXPR_COMMA);
 			} else {
-				*flags = EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD | EXPR_TOPEN
-						 | EXPR_COMMA;
+				*flags = SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD | SNEXPR_TOPEN
+						 | SNEXPR_COMMA;
 			}
 		}
 		return i;
@@ -774,23 +774,23 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 		}
 		return i;
 	} else if(isdigit(c)) {
-		if((*flags & EXPR_TNUMBER) == 0) {
+		if((*flags & SNEXPR_TNUMBER) == 0) {
 			return -1; // unexpected number
 		}
-		*flags = EXPR_TOP | EXPR_TCLOSE;
+		*flags = SNEXPR_TOP | SNEXPR_TCLOSE;
 		while((c == '.' || isdigit(c)) && i < len) {
 			i++;
 			c = s[i];
 		}
 		return i;
 	} else if(c == '"' || c == '\'') {
-		if((*flags & EXPR_TSTRING) == 0) {
+		if((*flags & SNEXPR_TSTRING) == 0) {
 			return -1; // unexpected string
 		}
 		if(i == len - 1) {
 			return -1; // invalud start of string
 		}
-		*flags = EXPR_TOP | EXPR_TCLOSE;
+		*flags = SNEXPR_TOP | SNEXPR_TCLOSE;
 		b = c;
 		i++;
 		c = s[i];
@@ -800,32 +800,32 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 		}
 		return i + 1;
 	} else if(isfirstvarchr(c)) {
-		if((*flags & EXPR_TWORD) == 0) {
+		if((*flags & SNEXPR_TWORD) == 0) {
 			return -2; // unexpected word
 		}
-		*flags = EXPR_TOP | EXPR_TOPEN | EXPR_TCLOSE;
+		*flags = SNEXPR_TOP | SNEXPR_TOPEN | SNEXPR_TCLOSE;
 		while((isvarchr(c)) && i < len) {
 			i++;
 			c = s[i];
 		}
 		return i;
 	} else if(c == '(' || c == ')') {
-		if(c == '(' && (*flags & EXPR_TOPEN) != 0) {
-			*flags = EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD | EXPR_TOPEN
-					 | EXPR_TCLOSE;
-		} else if(c == ')' && (*flags & EXPR_TCLOSE) != 0) {
-			*flags = EXPR_TOP | EXPR_TCLOSE;
+		if(c == '(' && (*flags & SNEXPR_TOPEN) != 0) {
+			*flags = SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD | SNEXPR_TOPEN
+					 | SNEXPR_TCLOSE;
+		} else if(c == ')' && (*flags & SNEXPR_TCLOSE) != 0) {
+			*flags = SNEXPR_TOP | SNEXPR_TCLOSE;
 		} else {
 			return -3; // unexpected parenthesis
 		}
 		return 1;
 	} else {
-		if((*flags & EXPR_TOP) == 0) {
+		if((*flags & SNEXPR_TOP) == 0) {
 			if(expr_op(&c, 1, 1) == SNE_OP_UNKNOWN) {
 				return -4; // missing expected operand
 			}
-			*flags = EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD | EXPR_TOPEN
-					 | EXPR_UNARY;
+			*flags = SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD | SNEXPR_TOPEN
+					 | SNEXPR_UNARY;
 			return 1;
 		} else {
 			int found = 0;
@@ -842,15 +842,15 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 			if(!found) {
 				return -5; // unknown operator
 			}
-			*flags = EXPR_TNUMBER | EXPR_TSTRING | EXPR_TWORD | EXPR_TOPEN;
+			*flags = SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD | SNEXPR_TOPEN;
 			return i;
 		}
 	}
 }
 
-#define EXPR_PAREN_ALLOWED 0
-#define EXPR_PAREN_EXPECTED 1
-#define EXPR_PAREN_FORBIDDEN 2
+#define SNEXPR_PAREN_ALLOWED 0
+#define SNEXPR_PAREN_EXPECTED 1
+#define SNEXPR_PAREN_FORBIDDEN 2
 
 static int expr_bind(const char *s, size_t len, vec_expr_t *es)
 {
@@ -988,8 +988,8 @@ static struct expr *expr_create(const char *s, size_t len,
 	};
 	vec(struct macro) macros = vec_init();
 
-	int flags = EXPR_TDEFAULT;
-	int paren = EXPR_PAREN_ALLOWED;
+	int flags = SNEXPR_TDEFAULT;
+	int paren = SNEXPR_PAREN_ALLOWED;
 	for(;;) {
 		int n = expr_next_token(s, len, &flags);
 		if(n == 0) {
@@ -1003,7 +1003,7 @@ static struct expr *expr_create(const char *s, size_t len,
 		if(*tok == '#') {
 			continue;
 		}
-		if(flags & EXPR_UNARY) {
+		if(flags & SNEXPR_UNARY) {
 			if(n == 1) {
 				switch(*tok) {
 					case '-':
@@ -1021,15 +1021,15 @@ static struct expr *expr_create(const char *s, size_t len,
 				n = 2;
 			}
 		}
-		if(*tok == '\n' && (flags & EXPR_COMMA)) {
-			flags = flags & (~EXPR_COMMA);
+		if(*tok == '\n' && (flags & SNEXPR_COMMA)) {
+			flags = flags & (~SNEXPR_COMMA);
 			n = 1;
 			tok = ",";
 		}
 		if(isspace(*tok)) {
 			continue;
 		}
-		int paren_next = EXPR_PAREN_ALLOWED;
+		int paren_next = SNEXPR_PAREN_ALLOWED;
 
 		if(idn > 0) {
 			if(n == 1 && *tok == '(') {
@@ -1047,31 +1047,31 @@ static struct expr *expr_create(const char *s, size_t len,
 						|| expr_func(funcs, id, idn) != NULL) {
 					struct expr_string str = {id, (int)idn};
 					vec_push(&os, str);
-					paren = EXPR_PAREN_EXPECTED;
+					paren = SNEXPR_PAREN_EXPECTED;
 				} else {
 					goto cleanup; /* invalid function name */
 				}
 			} else if((v = expr_var(vars, id, idn)) != NULL) {
 				vec_push(&es, expr_varref(v));
-				paren = EXPR_PAREN_FORBIDDEN;
+				paren = SNEXPR_PAREN_FORBIDDEN;
 			}
 			id = NULL;
 			idn = 0;
 		}
 
 		if(n == 1 && *tok == '(') {
-			if(paren == EXPR_PAREN_EXPECTED) {
+			if(paren == SNEXPR_PAREN_EXPECTED) {
 				struct expr_string str = {"{", 1};
 				vec_push(&os, str);
 				struct expr_arg arg = {vec_len(&os), vec_len(&es), vec_init()};
 				vec_push(&as, arg);
-			} else if(paren == EXPR_PAREN_ALLOWED) {
+			} else if(paren == SNEXPR_PAREN_ALLOWED) {
 				struct expr_string str = {"(", 1};
 				vec_push(&os, str);
 			} else {
 				goto cleanup; // Bad call
 			}
-		} else if(paren == EXPR_PAREN_EXPECTED) {
+		} else if(paren == SNEXPR_PAREN_EXPECTED) {
 			goto cleanup; // Bad call
 		} else if(n == 1 && *tok == ')') {
 			int minlen = (vec_len(&as) > 0 ? vec_peek(&as).oslen : 0);
@@ -1170,13 +1170,13 @@ static struct expr *expr_create(const char *s, size_t len,
 					}
 				}
 			}
-			paren_next = EXPR_PAREN_FORBIDDEN;
+			paren_next = SNEXPR_PAREN_FORBIDDEN;
 		} else if(!isnan(num = expr_parse_number(tok, n))) {
 			vec_push(&es, expr_constnum(num));
-			paren_next = EXPR_PAREN_FORBIDDEN;
+			paren_next = SNEXPR_PAREN_FORBIDDEN;
 		} else if(*tok == '"' || *tok == '\'') {
 			vec_push(&es, expr_conststr(tok, n));
-			paren_next = EXPR_PAREN_FORBIDDEN;
+			paren_next = SNEXPR_PAREN_FORBIDDEN;
 		} else if(expr_op(tok, n, -1) != SNE_OP_UNKNOWN) {
 			enum expr_type op = expr_op(tok, n, -1);
 			struct expr_string o2 = {NULL, 0};
