@@ -179,9 +179,10 @@ struct snexpr
 	} param;
 };
 
-#define snexpr_init()               \
-	{                             \
-		.type = (enum snexpr_type)0 \
+#define snexpr_init()                \
+	{                                \
+		.type = (enum snexpr_type)0, \
+		.eflags = 0u                 \
 	}
 
 struct snexpr_string
@@ -693,11 +694,25 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 			goto done;
 		case SNE_OP_ASSIGN:
 			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
-			n = rv1->param.num.nval;
+			snexpr_eval_check_null(rv1, SNE_OP_CONSTNUM);
 			if(sne_vec_nth(&e->param.op.args, 0).type == SNE_OP_VAR) {
-				e->param.op.args.buf[0].param.var.vref->v.nval = n;
+				if(e->param.op.args.buf[0].param.var.vref->evflags & SNEXPR_VALALLOC) {
+					if(e->param.op.args.buf[0].param.var.vref->v.sval!=NULL) {
+						free(e->param.op.args.buf[0].param.var.vref->v.sval);
+						e->param.op.args.buf[0].param.var.vref->v.sval = NULL;
+					}
+					e->param.op.args.buf[0].param.var.vref->evflags &= ~SNEXPR_VALALLOC;
+				}
+				if(rv1->type == SNE_OP_CONSTSTZ) {
+					e->param.op.args.buf[0].param.var.vref->v.sval = strdup(rv1->param.stz.sval);
+					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_VALALLOC;
+					lv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM);
+				} else {
+					n = rv1->param.num.nval;
+					e->param.op.args.buf[0].param.var.vref->v.nval = n;
+					lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
+				}
 			}
-			lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_COMMA:
 			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
@@ -1316,6 +1331,9 @@ static void snexpr_destroy(struct snexpr *e, struct snexpr_var_list *vars)
 	if(vars != NULL) {
 		for(struct snexpr_var *v = vars->head; v;) {
 			struct snexpr_var *next = v->next;
+			if(v->evflags & SNEXPR_VALALLOC) {
+				free(v->v.sval);
+			}
 			free(v);
 			v = next;
 		}
