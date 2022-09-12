@@ -145,8 +145,8 @@ static int prec[] = {0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 6, 7,
 		8, 9, 10, 11, 12, 0, 0, 0, 0};
 
 typedef sne_vec(struct snexpr) sne_vec_expr_t;
-typedef void (*exprfn_cleanup_t)(struct snexpr_func *f, void *context);
-typedef float (*exprfn_t)(struct snexpr_func *f, sne_vec_expr_t *args, void *context);
+typedef void (*snexprfn_cleanup_t)(struct snexpr_func *f, void *context);
+typedef struct snexpr* (*snexprfn_t)(struct snexpr_func *f, sne_vec_expr_t *args, void *context);
 
 struct snexpr
 {
@@ -306,8 +306,8 @@ static float snexpr_parse_number(const char *s, size_t len)
 struct snexpr_func
 {
 	const char *name;
-	exprfn_t f;
-	exprfn_cleanup_t cleanup;
+	snexprfn_t f;
+	snexprfn_cleanup_t cleanup;
 	size_t ctxsz;
 };
 
@@ -737,10 +737,13 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 			}
 			goto done;
 		case SNE_OP_FUNC:
-			lv = snexpr_convert_num(
-					e->param.func.f->f(e->param.func.f, &e->param.func.args,
-							e->param.func.context),
-					SNE_OP_CONSTNUM);
+			rv0 = e->param.func.f->f(e->param.func.f, &e->param.func.args,
+							e->param.func.context);
+			if(rv0->type == SNE_OP_CONSTSTZ) {
+				lv = snexpr_convert_stz(rv0->param.stz.sval, SNE_OP_CONSTSTZ);
+			} else {
+				lv = snexpr_convert_num(rv0->param.num.nval, SNE_OP_CONSTNUM);
+			}
 			goto done;
 		default:
 			lv = snexpr_convert_num(NAN, SNE_OP_CONSTNUM);
