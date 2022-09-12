@@ -47,7 +47,8 @@ static void snexpr_test_num(char *s, float expected)
 	}
 
 	if(result->type != SNE_OP_CONSTNUM) {
-		printf("FAIL: result is not a number (%d)\n", result->type);
+		printf("FAIL: result is not a number (%d!=%d)\n", result->type,
+				SNE_OP_CONSTNUM);
 		goto done;
 	}
 
@@ -91,8 +92,8 @@ static void snexpr_test_stz(char *s, char *expected)
 	}
 
 	if(result->type != SNE_OP_CONSTSTZ || result->param.stz.sval == NULL) {
-		printf("FAIL: result is not a string (%d/%p)\n",
-				result->type, result->param.stz.sval);
+		printf("FAIL: result is not a string (%d!=%d/%p)\n",
+				result->type, SNE_OP_CONSTSTZ, result->param.stz.sval);
 		goto done;
 	}
 
@@ -199,6 +200,7 @@ int main(int argc, char *argv[])
 
 	snexpr_test_stz("\"1\"+\"2\"", "12");
 	snexpr_test_stz("\"3\"+4", "34");
+	snexpr_test_stz("s=\"4\",s=s+\"5\"", "45");
 
 	printf("\n");
 
