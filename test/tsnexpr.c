@@ -31,15 +31,15 @@
 #include <sys/time.h>
 
 
-static void expr_test_num(char *s, float expected)
+static void snexpr_test_num(char *s, float expected)
 {
-	struct expr_var_list vars = {0};
-	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
+	struct snexpr_var_list vars = {0};
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
 	}
-	struct expr *result = expr_eval(e);
+	struct snexpr *result = snexpr_eval(e);
 
 	if(result==NULL) {
 		printf("FAIL: result is NULL\n");
@@ -67,23 +67,23 @@ static void expr_test_num(char *s, float expected)
 	}
 
 done:
-	expr_result_free(result);
+	snexpr_result_free(result);
 
 end:
-	expr_destroy(e, &vars);
+	snexpr_destroy(e, &vars);
 	free(p);
 }
 
 
-static void expr_test_stz(char *s, char *expected)
+static void snexpr_test_stz(char *s, char *expected)
 {
-	struct expr_var_list vars = {0};
-	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
+	struct snexpr_var_list vars = {0};
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
 	}
-	struct expr *result = expr_eval(e);
+	struct snexpr *result = snexpr_eval(e);
 
 	if(result==NULL) {
 		printf("FAIL: result is NULL\n");
@@ -112,24 +112,24 @@ static void expr_test_stz(char *s, char *expected)
 	}
 
 done:
-	expr_result_free(result);
+	snexpr_result_free(result);
 
 end:
-	expr_destroy(e, &vars);
+	snexpr_destroy(e, &vars);
 	free(p);
 }
 
 
-static void expr_test_bool(char *s, int expected)
+static void snexpr_test_bool(char *s, int expected)
 {
 	int b = 0;
-	struct expr_var_list vars = {0};
-	struct expr *e = expr_create(s, strlen(s), &vars, NULL);
+	struct snexpr_var_list vars = {0};
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
 	}
-	struct expr *result = expr_eval(e);
+	struct snexpr *result = snexpr_eval(e);
 
 	if(result==NULL) {
 		printf("FAIL: result is NULL\n");
@@ -174,37 +174,37 @@ static void expr_test_bool(char *s, int expected)
 	}
 
 done:
-	expr_result_free(result);
+	snexpr_result_free(result);
 
 end:
-	expr_destroy(e, &vars);
+	snexpr_destroy(e, &vars);
 	free(p);
 }
 
 
 int main(int argc, char *argv[])
 {
-	expr_test_num("1+\"2\"", 1 + 2);
-	expr_test_num("10-2", 10 - 2);
-	expr_test_num("2*3", 2 * 3);
-	expr_test_num("2+3*4", 2 + 3 * 4);
-	expr_test_num("(2+3)*4", (2 + 3) * 4);
-	expr_test_num("2*3+4", 2 * 3 + 4);
-	expr_test_num("2+3/2", 2 + 3.0 / 2.0);
-	expr_test_num("1/3*6/4*2", 1.0 / 3 * 6 / 4.0 * 2);
-	expr_test_num("1*3/6*4/2", 1.0 * 3 / 6 * 4.0 / 2.0);
-	expr_test_num("(1+2)*3", (1 + 2) * 3);
+	snexpr_test_num("1+\"2\"", 1 + 2);
+	snexpr_test_num("10-2", 10 - 2);
+	snexpr_test_num("2*3", 2 * 3);
+	snexpr_test_num("2+3*4", 2 + 3 * 4);
+	snexpr_test_num("(2+3)*4", (2 + 3) * 4);
+	snexpr_test_num("2*3+4", 2 * 3 + 4);
+	snexpr_test_num("2+3/2", 2 + 3.0 / 2.0);
+	snexpr_test_num("1/3*6/4*2", 1.0 / 3 * 6 / 4.0 * 2);
+	snexpr_test_num("1*3/6*4/2", 1.0 * 3 / 6 * 4.0 / 2.0);
+	snexpr_test_num("(1+2)*3", (1 + 2) * 3);
 
 	printf("\n");
 
-	expr_test_stz("\"1\"+\"2\"", "12");
-	expr_test_stz("\"3\"+4", "34");
+	snexpr_test_stz("\"1\"+\"2\"", "12");
+	snexpr_test_stz("\"3\"+4", "34");
 
 	printf("\n");
 
-	expr_test_bool("\"1\" == \"2\"", 0);
-	expr_test_bool("\"12\" == \"1\" + 2", 1);
-	expr_test_bool("(\"abc\" == \"abc\")", 1);
+	snexpr_test_bool("\"1\" == \"2\"", 0);
+	snexpr_test_bool("\"12\" == \"1\" + 2", 1);
+	snexpr_test_bool("(\"abc\" == \"abc\")", 1);
 
 	return 0;
 }

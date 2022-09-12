@@ -54,7 +54,7 @@ extern "C" {
 /*
  * Simple expandable vector implementation
  */
-static int vec_expand(char **buf, int *length, int *cap, int memsz)
+static int sne_vec_expand(char **buf, int *length, int *cap, int memsz)
 {
 	if(*length + 1 > *cap) {
 		void *ptr;
@@ -68,27 +68,27 @@ static int vec_expand(char **buf, int *length, int *cap, int memsz)
 	}
 	return 0;
 }
-#define vec(T)   \
+#define sne_vec(T)   \
 	struct       \
 	{            \
 		T *buf;  \
 		int len; \
 		int cap; \
 	}
-#define vec_init() \
+#define sne_vec_init() \
 	{              \
 		NULL, 0, 0 \
 	}
-#define vec_len(v) ((v)->len)
-#define vec_unpack(v) \
+#define sne_vec_len(v) ((v)->len)
+#define sne_vec_unpack(v) \
 	(char **)&(v)->buf, &(v)->len, &(v)->cap, sizeof(*(v)->buf)
-#define vec_push(v, val) \
-	vec_expand(vec_unpack(v)) ? -1 : ((v)->buf[(v)->len++] = (val), 0)
-#define vec_nth(v, i) (v)->buf[i]
-#define vec_peek(v) (v)->buf[(v)->len - 1]
-#define vec_pop(v) (v)->buf[--(v)->len]
-#define vec_free(v) (free((v)->buf), (v)->buf = NULL, (v)->len = (v)->cap = 0)
-#define vec_foreach(v, var, iter)                                             \
+#define sne_vec_push(v, val) \
+	sne_vec_expand(sne_vec_unpack(v)) ? -1 : ((v)->buf[(v)->len++] = (val), 0)
+#define sne_vec_nth(v, i) (v)->buf[i]
+#define sne_vec_peek(v) (v)->buf[(v)->len - 1]
+#define sne_vec_pop(v) (v)->buf[--(v)->len]
+#define sne_vec_free(v) (free((v)->buf), (v)->buf = NULL, (v)->len = (v)->cap = 0)
+#define sne_vec_foreach(v, var, iter)                                             \
 	if((v)->len > 0)                                                          \
 		for((iter) = 0; (iter) < (v)->len && (((var) = (v)->buf[(iter)]), 1); \
 				++(iter))
@@ -96,11 +96,11 @@ static int vec_expand(char **buf, int *length, int *cap, int memsz)
 /*
  * Expression data types
  */
-struct expr;
-struct expr_func;
-struct expr_var;
+struct snexpr;
+struct snexpr_func;
+struct snexpr_var;
 
-enum expr_type
+enum snexpr_type
 {
 	SNE_OP_UNKNOWN,
 	SNE_OP_UNARY_MINUS,
@@ -144,13 +144,13 @@ enum expr_type
 static int prec[] = {0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 6, 7,
 		8, 9, 10, 11, 12, 0, 0, 0, 0};
 
-typedef vec(struct expr) vec_expr_t;
-typedef void (*exprfn_cleanup_t)(struct expr_func *f, void *context);
-typedef float (*exprfn_t)(struct expr_func *f, vec_expr_t *args, void *context);
+typedef sne_vec(struct snexpr) sne_vec_expr_t;
+typedef void (*exprfn_cleanup_t)(struct snexpr_func *f, void *context);
+typedef float (*exprfn_t)(struct snexpr_func *f, sne_vec_expr_t *args, void *context);
 
-struct expr
+struct snexpr
 {
-	enum expr_type type;
+	enum snexpr_type type;
 	unsigned int eflags;
 	union
 	{
@@ -164,56 +164,56 @@ struct expr
 		} stz;
 		struct
 		{
-			struct expr_var *vref;
+			struct snexpr_var *vref;
 		} var;
 		struct
 		{
-			vec_expr_t args;
+			sne_vec_expr_t args;
 		} op;
 		struct
 		{
-			struct expr_func *f;
-			vec_expr_t args;
+			struct snexpr_func *f;
+			sne_vec_expr_t args;
 			void *context;
 		} func;
 	} param;
 };
 
-#define expr_init()               \
+#define snexpr_init()               \
 	{                             \
-		.type = (enum expr_type)0 \
+		.type = (enum snexpr_type)0 \
 	}
 
-struct expr_string
+struct snexpr_string
 {
 	const char *s;
 	int n;
 };
-struct expr_arg
+struct snexpr_arg
 {
 	int oslen;
 	int eslen;
-	vec_expr_t args;
+	sne_vec_expr_t args;
 };
 
-typedef vec(struct expr_string) vec_str_t;
-typedef vec(struct expr_arg) vec_arg_t;
+typedef sne_vec(struct snexpr_string) sne_vec_str_t;
+typedef sne_vec(struct snexpr_arg) sne_vec_arg_t;
 
-static int expr_is_unary(enum expr_type op)
+static int snexpr_is_unary(enum snexpr_type op)
 {
 	return op == SNE_OP_UNARY_MINUS || op == SNE_OP_UNARY_LOGICAL_NOT
 		   || op == SNE_OP_UNARY_BITWISE_NOT;
 }
 
-static int expr_is_binary(enum expr_type op)
+static int snexpr_is_binary(enum snexpr_type op)
 {
-	return !expr_is_unary(op) && op != SNE_OP_CONSTNUM && op != SNE_OP_VAR
+	return !snexpr_is_unary(op) && op != SNE_OP_CONSTNUM && op != SNE_OP_VAR
 		   && op != SNE_OP_FUNC && op != SNE_OP_UNKNOWN;
 }
 
-static int expr_prec(enum expr_type a, enum expr_type b)
+static int snexpr_prec(enum snexpr_type a, enum snexpr_type b)
 {
-	int left = expr_is_binary(a) && a != SNE_OP_ASSIGN && a != SNE_OP_POWER
+	int left = snexpr_is_binary(a) && a != SNE_OP_ASSIGN && a != SNE_OP_POWER
 			   && a != SNE_OP_COMMA;
 	return (left && prec[a] >= prec[b]) || (prec[a] > prec[b]);
 }
@@ -227,7 +227,7 @@ static int expr_prec(enum expr_type a, enum expr_type b)
 static struct
 {
 	const char *s;
-	const enum expr_type op;
+	const enum snexpr_type op;
 } OPS[] = {
 		{"-u", SNE_OP_UNARY_MINUS},
 		{"!u", SNE_OP_UNARY_LOGICAL_NOT},
@@ -261,18 +261,18 @@ static struct
 		{"^", SNE_OP_UNARY_BITWISE_NOT},
 };
 
-static enum expr_type expr_op(const char *s, size_t len, int unary)
+static enum snexpr_type snexpr_op(const char *s, size_t len, int unary)
 {
 	for(unsigned int i = 0; i < sizeof(OPS) / sizeof(OPS[0]); i++) {
 		if(strlen(OPS[i].s) == len && strncmp(OPS[i].s, s, len) == 0
-				&& (unary == -1 || expr_is_unary(OPS[i].op) == unary)) {
+				&& (unary == -1 || snexpr_is_unary(OPS[i].op) == unary)) {
 			return OPS[i].op;
 		}
 	}
 	return SNE_OP_UNKNOWN;
 }
 
-static float expr_parse_number(const char *s, size_t len)
+static float snexpr_parse_number(const char *s, size_t len)
 {
 	float num = 0;
 	unsigned int frac = 0;
@@ -302,7 +302,7 @@ static float expr_parse_number(const char *s, size_t len)
 /*
  * Functions
  */
-struct expr_func
+struct snexpr_func
 {
 	const char *name;
 	exprfn_t f;
@@ -310,10 +310,10 @@ struct expr_func
 	size_t ctxsz;
 };
 
-static struct expr_func *expr_func(
-		struct expr_func *funcs, const char *s, size_t len)
+static struct snexpr_func *snexpr_func(
+		struct snexpr_func *funcs, const char *s, size_t len)
 {
-	for(struct expr_func *f = funcs; f->name; f++) {
+	for(struct snexpr_func *f = funcs; f->name; f++) {
 		if(strlen(f->name) == len && strncmp(f->name, s, len) == 0) {
 			return f;
 		}
@@ -324,7 +324,7 @@ static struct expr_func *expr_func(
 /*
  * Variables
  */
-struct expr_var
+struct snexpr_var
 {
 	unsigned int evflags;
 	char *name;
@@ -333,18 +333,18 @@ struct expr_var
 		float nval;
 		char *sval;
 	} v;
-	struct expr_var *next;
+	struct snexpr_var *next;
 };
 
-struct expr_var_list
+struct snexpr_var_list
 {
-	struct expr_var *head;
+	struct snexpr_var *head;
 };
 
-static struct expr_var *expr_var(
-		struct expr_var_list *vars, const char *s, size_t len)
+static struct snexpr_var *snexpr_var(
+		struct snexpr_var_list *vars, const char *s, size_t len)
 {
-	struct expr_var *v = NULL;
+	struct snexpr_var *v = NULL;
 	if(len == 0 || !isfirstvarchr(*s)) {
 		return NULL;
 	}
@@ -353,13 +353,13 @@ static struct expr_var *expr_var(
 			return v;
 		}
 	}
-	v = (struct expr_var *)calloc(1, sizeof(struct expr_var) + len + 1);
+	v = (struct snexpr_var *)calloc(1, sizeof(struct snexpr_var) + len + 1);
 	if(v == NULL) {
 		return NULL; /* allocation failed */
 	}
-	memset(v, 0, sizeof(struct expr_var) + len + 1);
+	memset(v, 0, sizeof(struct snexpr_var) + len + 1);
 	v->next = vars->head;
-	v->name = (char *)v + sizeof(struct expr_var);
+	v->name = (char *)v + sizeof(struct snexpr_var);
 	strncpy(v->name, s, len);
 	v->name[len] = '\0';
 	vars->head = v;
@@ -378,13 +378,13 @@ static int to_int(float x)
 }
 
 
-static struct expr *expr_convert_num(float value, unsigned int ctype)
+static struct snexpr *snexpr_convert_num(float value, unsigned int ctype)
 {
-	struct expr *e = (struct expr *)malloc(sizeof(struct expr));
+	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
 	if(e == NULL) {
 		return NULL;
 	}
-	memset(e, 0, sizeof(struct expr));
+	memset(e, 0, sizeof(struct snexpr));
 
 	if(ctype == SNE_OP_CONSTSTZ) {
 		e->eflags |= SNEXPR_EXPALLOC | SNEXPR_VALALLOC;
@@ -399,13 +399,13 @@ static struct expr *expr_convert_num(float value, unsigned int ctype)
 	return e;
 }
 
-static struct expr *expr_convert_stz(char *value, unsigned int ctype)
+static struct snexpr *snexpr_convert_stz(char *value, unsigned int ctype)
 {
-	struct expr *e = (struct expr *)malloc(sizeof(struct expr));
+	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
 	if(e == NULL) {
 		return NULL;
 	}
-	memset(e, 0, sizeof(struct expr));
+	memset(e, 0, sizeof(struct snexpr));
 
 	if(ctype == SNE_OP_CONSTNUM) {
 		e->eflags |= SNEXPR_EXPALLOC;
@@ -425,13 +425,13 @@ static struct expr *expr_convert_stz(char *value, unsigned int ctype)
 	return e;
 }
 
-static struct expr *expr_concat_strz(char *value0, char *value1)
+static struct snexpr *snexpr_concat_strz(char *value0, char *value1)
 {
-	struct expr *e = (struct expr *)malloc(sizeof(struct expr));
+	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
 	if(e == NULL) {
 		return NULL;
 	}
-	memset(e, 0, sizeof(struct expr));
+	memset(e, 0, sizeof(struct snexpr));
 
 	e->param.stz.sval = (char *)malloc(strlen(value0) + strlen(value1) + 1);
 	if(e->param.stz.sval == NULL) {
@@ -445,7 +445,7 @@ static struct expr *expr_concat_strz(char *value0, char *value1)
 	return e;
 }
 
-static void expr_result_free(struct expr *e)
+static void snexpr_result_free(struct snexpr *e)
 {
 	if(e == NULL) {
 		return;
@@ -460,291 +460,291 @@ static void expr_result_free(struct expr *e)
 	free(e);
 }
 
-#define expr_eval_check_val(val, vtype) do { \
+#define snexpr_eval_check_val(val, vtype) do { \
 		if(val==NULL || val->type != vtype) { \
 			goto error; \
 		} \
 	} while(0)
 
-#define expr_eval_check_null(val, vtype) do { \
+#define snexpr_eval_check_null(val, vtype) do { \
 		if(val==NULL) { \
 			goto error; \
 		} \
 	} while(0)
 
-#define expr_eval_cmp(_CMPOP_) do { \
-			rv0 = expr_eval(&e->param.op.args.buf[0]); \
-			expr_eval_check_null(rv0, SNE_OP_CONSTNUM); \
-			rv1 = expr_eval(&e->param.op.args.buf[1]); \
-			expr_eval_check_null(rv1, SNE_OP_CONSTNUM); \
+#define snexpr_eval_cmp(_CMPOP_) do { \
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]); \
+			snexpr_eval_check_null(rv0, SNE_OP_CONSTNUM); \
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]); \
+			snexpr_eval_check_null(rv1, SNE_OP_CONSTNUM); \
 			if(rv0->type == SNE_OP_CONSTSTZ) { \
 				/* string comparison */ \
 				if(rv1->type == SNE_OP_CONSTNUM) { \
-					tv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ); \
-					expr_result_free(rv1); \
+					tv = snexpr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ); \
+					snexpr_result_free(rv1); \
 					rv1 = tv; \
-					expr_eval_check_val(rv1, SNE_OP_CONSTSTZ); \
+					snexpr_eval_check_val(rv1, SNE_OP_CONSTSTZ); \
 				} \
-				lv = expr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval); \
+				lv = snexpr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval); \
 				if(strcmp(rv0->param.stz.sval, rv1->param.stz.sval) _CMPOP_ 0) { \
-					lv = expr_convert_num(1, SNE_OP_CONSTNUM); \
+					lv = snexpr_convert_num(1, SNE_OP_CONSTNUM); \
 				} else { \
-					lv = expr_convert_num(0, SNE_OP_CONSTNUM); \
+					lv = snexpr_convert_num(0, SNE_OP_CONSTNUM); \
 				} \
 			} else { \
 				/* number comparison */ \
 				if(rv1->type == SNE_OP_CONSTSTZ) { \
-					tv = expr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM); \
-					expr_result_free(rv1); \
+					tv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM); \
+					snexpr_result_free(rv1); \
 					rv1 = tv; \
-					expr_eval_check_val(rv1, SNE_OP_CONSTNUM); \
+					snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM); \
 				} \
-				lv = expr_convert_num( \
+				lv = snexpr_convert_num( \
 						rv0->param.num.nval _CMPOP_ rv1->param.num.nval, SNE_OP_CONSTNUM); \
 			} \
 	} while(0)
 
-static struct expr *expr_eval(struct expr *e)
+static struct snexpr *snexpr_eval(struct snexpr *e)
 {
 	float n;
-	struct expr *lv = NULL;
-	struct expr *rv0 = NULL;
-	struct expr *rv1 = NULL;
-	struct expr *tv = NULL;
+	struct snexpr *lv = NULL;
+	struct snexpr *rv0 = NULL;
+	struct snexpr *rv1 = NULL;
+	struct snexpr *tv = NULL;
 
 	switch(e->type) {
 		case SNE_OP_UNARY_MINUS:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(-(rv0->param.num.nval), SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(-(rv0->param.num.nval), SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_UNARY_LOGICAL_NOT:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(!(rv0->param.num.nval), SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(!(rv0->param.num.nval), SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_UNARY_BITWISE_NOT:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(~(to_int(rv0->param.num.nval)), SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(~(to_int(rv0->param.num.nval)), SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_POWER:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					powf(rv0->param.num.nval, rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_MULTIPLY:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					rv0->param.num.nval * rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_DIVIDE:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 			if(rv1->param.num.nval == 0) {
 				goto error;
 			}
-			lv = expr_convert_num(
+			lv = snexpr_convert_num(
 					rv0->param.num.nval / rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_REMAINDER:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					fmodf(rv0->param.num.nval, rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_PLUS:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_null(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_null(rv1, SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_null(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_null(rv1, SNE_OP_CONSTNUM);
 			if(rv0->type == SNE_OP_CONSTSTZ) {
 				/* string concatenation */
 				if(rv1->type == SNE_OP_CONSTNUM) {
-					tv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ);
-					expr_result_free(rv1);
+					tv = snexpr_convert_num(rv1->param.num.nval, SNE_OP_CONSTSTZ);
+					snexpr_result_free(rv1);
 					rv1 = tv;
-					expr_eval_check_val(rv1, SNE_OP_CONSTSTZ);
+					snexpr_eval_check_val(rv1, SNE_OP_CONSTSTZ);
 				}
-				lv = expr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval);
+				lv = snexpr_concat_strz(rv0->param.stz.sval, rv1->param.stz.sval);
 			} else {
 				/* add */
 				if(rv1->type == SNE_OP_CONSTSTZ) {
-					tv = expr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM);
-					expr_result_free(rv1);
+					tv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTNUM);
+					snexpr_result_free(rv1);
 					rv1 = tv;
-					expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+					snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
 				}
-				lv = expr_convert_num(
+				lv = snexpr_convert_num(
 						rv0->param.num.nval + rv1->param.num.nval, SNE_OP_CONSTNUM);
 			}
 			goto done;
 		case SNE_OP_MINUS:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					rv0->param.num.nval - rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_SHL:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					to_int(rv0->param.num.nval) << to_int(rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_SHR:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					to_int(rv0->param.num.nval) >> to_int(rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_LT:
-			expr_eval_cmp(<);
+			snexpr_eval_cmp(<);
 			goto done;
 		case SNE_OP_LE:
-			expr_eval_cmp(<=);
+			snexpr_eval_cmp(<=);
 			goto done;
 		case SNE_OP_GT:
-			expr_eval_cmp(>);
+			snexpr_eval_cmp(>);
 			goto done;
 		case SNE_OP_GE:
-			expr_eval_cmp(>=);
+			snexpr_eval_cmp(>=);
 			goto done;
 		case SNE_OP_EQ:
-			expr_eval_cmp(==);
+			snexpr_eval_cmp(==);
 			goto done;
 		case SNE_OP_NE:
-			expr_eval_cmp(!=);
+			snexpr_eval_cmp(!=);
 			goto done;
 		case SNE_OP_BITWISE_AND:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					to_int(rv0->param.num.nval) & to_int(rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_BITWISE_OR:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					to_int(rv0->param.num.nval) | to_int(rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_BITWISE_XOR:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			expr_eval_check_val(rv0, SNE_OP_CONSTNUM);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			expr_eval_check_val(rv1, SNE_OP_CONSTNUM);
-			lv = expr_convert_num(
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			snexpr_eval_check_val(rv0, SNE_OP_CONSTNUM);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			snexpr_eval_check_val(rv1, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(
 					to_int(rv0->param.num.nval) ^ to_int(rv1->param.num.nval),
 					SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_LOGICAL_AND:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
 			n = rv0->param.num.nval;
 			if(n != 0) {
-				rv1 = expr_eval(&e->param.op.args.buf[1]);
+				rv1 = snexpr_eval(&e->param.op.args.buf[1]);
 				n = rv1->param.num.nval;
 				if(n != 0) {
-					lv = expr_convert_num(n, SNE_OP_CONSTNUM);
+					lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 					goto done;
 				}
 			}
-			lv = expr_convert_num(0, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(0, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_LOGICAL_OR:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
 			n = rv0->param.num.nval;
 			if(n != 0 && !isnan(n)) {
-				lv = expr_convert_num(n, SNE_OP_CONSTNUM);
+				lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 				goto done;
 			} else {
-				rv1 = expr_eval(&e->param.op.args.buf[1]);
+				rv1 = snexpr_eval(&e->param.op.args.buf[1]);
 				n = rv1->param.num.nval;
 				if(n != 0) {
-					lv = expr_convert_num(n, SNE_OP_CONSTNUM);
+					lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 					goto done;
 				}
 			}
-			lv = expr_convert_num(0, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(0, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_ASSIGN:
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
 			n = rv1->param.num.nval;
-			if(vec_nth(&e->param.op.args, 0).type == SNE_OP_VAR) {
+			if(sne_vec_nth(&e->param.op.args, 0).type == SNE_OP_VAR) {
 				e->param.op.args.buf[0].param.var.vref->v.nval = n;
 			}
-			lv = expr_convert_num(n, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_COMMA:
-			rv0 = expr_eval(&e->param.op.args.buf[0]);
-			rv1 = expr_eval(&e->param.op.args.buf[1]);
-			lv = expr_convert_num(rv1->param.num.nval, SNE_OP_CONSTNUM);
+			rv0 = snexpr_eval(&e->param.op.args.buf[0]);
+			rv1 = snexpr_eval(&e->param.op.args.buf[1]);
+			lv = snexpr_convert_num(rv1->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_CONSTNUM:
-			lv = expr_convert_num(e->param.num.nval, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(e->param.num.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_CONSTSTZ:
-			lv = expr_convert_stz(e->param.stz.sval, SNE_OP_CONSTSTZ);
+			lv = snexpr_convert_stz(e->param.stz.sval, SNE_OP_CONSTSTZ);
 			goto done;
 		case SNE_OP_VAR:
-			lv = expr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
 			goto done;
 		case SNE_OP_FUNC:
-			lv = expr_convert_num(
+			lv = snexpr_convert_num(
 					e->param.func.f->f(e->param.func.f, &e->param.func.args,
 							e->param.func.context),
 					SNE_OP_CONSTNUM);
 			goto done;
 		default:
-			lv = expr_convert_num(NAN, SNE_OP_CONSTNUM);
+			lv = snexpr_convert_num(NAN, SNE_OP_CONSTNUM);
 			goto done;
 	}
 
 done:
 	if(rv0 != NULL) {
-		expr_result_free(rv0);
+		snexpr_result_free(rv0);
 	}
 	if(rv1 != NULL) {
-		expr_result_free(rv1);
+		snexpr_result_free(rv1);
 	}
 	return lv;
 
 error:
 	if(rv0 != NULL) {
-		expr_result_free(rv0);
+		snexpr_result_free(rv0);
 	}
 	if(rv1 != NULL) {
-		expr_result_free(rv1);
+		snexpr_result_free(rv1);
 	}
 	return NULL;
 
 }
 
-static int expr_next_token(const char *s, size_t len, int *flags)
+static int snexpr_next_token(const char *s, size_t len, int *flags)
 {
 	unsigned int i = 0;
 	char b;
@@ -821,7 +821,7 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 		return 1;
 	} else {
 		if((*flags & SNEXPR_TOP) == 0) {
-			if(expr_op(&c, 1, 1) == SNE_OP_UNKNOWN) {
+			if(snexpr_op(&c, 1, 1) == SNE_OP_UNKNOWN) {
 				return -4; // missing expected operand
 			}
 			*flags = SNEXPR_TNUMBER | SNEXPR_TSTRING | SNEXPR_TWORD | SNEXPR_TOPEN
@@ -831,7 +831,7 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 			int found = 0;
 			while(!isvarchr(c) && !isspace(c) && c != '(' && c != ')'
 					&& i < len) {
-				if(expr_op(s, i + 1, 0) != SNE_OP_UNKNOWN) {
+				if(snexpr_op(s, i + 1, 0) != SNE_OP_UNKNOWN) {
 					found = 1;
 				} else if(found) {
 					break;
@@ -852,59 +852,59 @@ static int expr_next_token(const char *s, size_t len, int *flags)
 #define SNEXPR_PAREN_EXPECTED 1
 #define SNEXPR_PAREN_FORBIDDEN 2
 
-static int expr_bind(const char *s, size_t len, vec_expr_t *es)
+static int snexpr_bind(const char *s, size_t len, sne_vec_expr_t *es)
 {
-	enum expr_type op = expr_op(s, len, -1);
+	enum snexpr_type op = snexpr_op(s, len, -1);
 	if(op == SNE_OP_UNKNOWN) {
 		return -1;
 	}
 
-	if(expr_is_unary(op)) {
-		if(vec_len(es) < 1) {
+	if(snexpr_is_unary(op)) {
+		if(sne_vec_len(es) < 1) {
 			return -1;
 		}
-		struct expr arg = vec_pop(es);
-		struct expr unary = expr_init();
+		struct snexpr arg = sne_vec_pop(es);
+		struct snexpr unary = snexpr_init();
 		unary.type = op;
-		vec_push(&unary.param.op.args, arg);
-		vec_push(es, unary);
+		sne_vec_push(&unary.param.op.args, arg);
+		sne_vec_push(es, unary);
 	} else {
-		if(vec_len(es) < 2) {
+		if(sne_vec_len(es) < 2) {
 			return -1;
 		}
-		struct expr b = vec_pop(es);
-		struct expr a = vec_pop(es);
-		struct expr binary = expr_init();
+		struct snexpr b = sne_vec_pop(es);
+		struct snexpr a = sne_vec_pop(es);
+		struct snexpr binary = snexpr_init();
 		binary.type = op;
 		if(op == SNE_OP_ASSIGN && a.type != SNE_OP_VAR) {
 			return -1; /* Bad assignment */
 		}
-		vec_push(&binary.param.op.args, a);
-		vec_push(&binary.param.op.args, b);
-		vec_push(es, binary);
+		sne_vec_push(&binary.param.op.args, a);
+		sne_vec_push(&binary.param.op.args, b);
+		sne_vec_push(es, binary);
 	}
 	return 0;
 }
 
-static struct expr expr_constnum(float value)
+static struct snexpr snexpr_constnum(float value)
 {
-	struct expr e = expr_init();
+	struct snexpr e = snexpr_init();
 	e.type = SNE_OP_CONSTNUM;
 	e.param.num.nval = value;
 	return e;
 }
 
-static struct expr expr_varref(struct expr_var *v)
+static struct snexpr snexpr_varref(struct snexpr_var *v)
 {
-	struct expr e = expr_init();
+	struct snexpr e = snexpr_init();
 	e.type = SNE_OP_VAR;
 	e.param.var.vref = v;
 	return e;
 }
 
-static struct expr expr_conststr(const char *value, int len)
+static struct snexpr snexpr_conststr(const char *value, int len)
 {
-	struct expr e = expr_init();
+	struct snexpr e = snexpr_init();
 	if(len < 2) {
 		len = 0;
 	} else {
@@ -925,28 +925,28 @@ static struct expr expr_conststr(const char *value, int len)
 	return e;
 }
 
-static struct expr expr_binary(
-		enum expr_type type, struct expr a, struct expr b)
+static struct snexpr snexpr_binary(
+		enum snexpr_type type, struct snexpr a, struct snexpr b)
 {
-	struct expr e = expr_init();
+	struct snexpr e = snexpr_init();
 	e.type = type;
-	vec_push(&e.param.op.args, a);
-	vec_push(&e.param.op.args, b);
+	sne_vec_push(&e.param.op.args, a);
+	sne_vec_push(&e.param.op.args, b);
 	return e;
 }
 
-static inline void expr_copy(struct expr *dst, struct expr *src)
+static inline void snexpr_copy(struct snexpr *dst, struct snexpr *src)
 {
 	int i;
-	struct expr arg;
+	struct snexpr arg;
 	dst->type = src->type;
 	if(src->type == SNE_OP_FUNC) {
 		dst->param.func.f = src->param.func.f;
-		vec_foreach(&src->param.func.args, arg, i)
+		sne_vec_foreach(&src->param.func.args, arg, i)
 		{
-			struct expr tmp = expr_init();
-			expr_copy(&tmp, &arg);
-			vec_push(&dst->param.func.args, tmp);
+			struct snexpr tmp = snexpr_init();
+			snexpr_copy(&tmp, &arg);
+			sne_vec_push(&dst->param.func.args, tmp);
 		}
 		if(src->param.func.f->ctxsz > 0) {
 			dst->param.func.context = calloc(1, src->param.func.f->ctxsz);
@@ -956,42 +956,42 @@ static inline void expr_copy(struct expr *dst, struct expr *src)
 	} else if(src->type == SNE_OP_VAR) {
 		dst->param.var.vref = src->param.var.vref;
 	} else {
-		vec_foreach(&src->param.op.args, arg, i)
+		sne_vec_foreach(&src->param.op.args, arg, i)
 		{
-			struct expr tmp = expr_init();
-			expr_copy(&tmp, &arg);
-			vec_push(&dst->param.op.args, tmp);
+			struct snexpr tmp = snexpr_init();
+			snexpr_copy(&tmp, &arg);
+			sne_vec_push(&dst->param.op.args, tmp);
 		}
 	}
 }
 
-static void expr_destroy_args(struct expr *e);
+static void snexpr_destroy_args(struct snexpr *e);
 
-static struct expr *expr_create(const char *s, size_t len,
-		struct expr_var_list *vars, struct expr_func *funcs)
+static struct snexpr *snexpr_create(const char *s, size_t len,
+		struct snexpr_var_list *vars, struct snexpr_func *funcs)
 {
 	float num;
-	struct expr_var *v;
+	struct snexpr_var *v;
 	const char *id = NULL;
 	size_t idn = 0;
 
-	struct expr *result = NULL;
+	struct snexpr *result = NULL;
 
-	vec_expr_t es = vec_init();
-	vec_str_t os = vec_init();
-	vec_arg_t as = vec_init();
+	sne_vec_expr_t es = sne_vec_init();
+	sne_vec_str_t os = sne_vec_init();
+	sne_vec_arg_t as = sne_vec_init();
 
 	struct macro
 	{
 		char *name;
-		vec_expr_t body;
+		sne_vec_expr_t body;
 	};
-	vec(struct macro) macros = vec_init();
+	sne_vec(struct macro) macros = sne_vec_init();
 
 	int flags = SNEXPR_TDEFAULT;
 	int paren = SNEXPR_PAREN_ALLOWED;
 	for(;;) {
-		int n = expr_next_token(s, len, &flags);
+		int n = snexpr_next_token(s, len, &flags);
 		if(n == 0) {
 			break;
 		} else if(n < 0) {
@@ -1036,7 +1036,7 @@ static struct expr *expr_create(const char *s, size_t len,
 				int i;
 				int has_macro = 0;
 				struct macro m;
-				vec_foreach(&macros, m, i)
+				sne_vec_foreach(&macros, m, i)
 				{
 					if(strlen(m.name) == idn && strncmp(m.name, id, idn) == 0) {
 						has_macro = 1;
@@ -1044,15 +1044,15 @@ static struct expr *expr_create(const char *s, size_t len,
 					}
 				}
 				if((idn == 1 && id[0] == '$') || has_macro
-						|| expr_func(funcs, id, idn) != NULL) {
-					struct expr_string str = {id, (int)idn};
-					vec_push(&os, str);
+						|| snexpr_func(funcs, id, idn) != NULL) {
+					struct snexpr_string str = {id, (int)idn};
+					sne_vec_push(&os, str);
 					paren = SNEXPR_PAREN_EXPECTED;
 				} else {
 					goto cleanup; /* invalid function name */
 				}
-			} else if((v = expr_var(vars, id, idn)) != NULL) {
-				vec_push(&es, expr_varref(v));
+			} else if((v = snexpr_var(vars, id, idn)) != NULL) {
+				sne_vec_push(&es, snexpr_varref(v));
 				paren = SNEXPR_PAREN_FORBIDDEN;
 			}
 			id = NULL;
@@ -1061,60 +1061,60 @@ static struct expr *expr_create(const char *s, size_t len,
 
 		if(n == 1 && *tok == '(') {
 			if(paren == SNEXPR_PAREN_EXPECTED) {
-				struct expr_string str = {"{", 1};
-				vec_push(&os, str);
-				struct expr_arg arg = {vec_len(&os), vec_len(&es), vec_init()};
-				vec_push(&as, arg);
+				struct snexpr_string str = {"{", 1};
+				sne_vec_push(&os, str);
+				struct snexpr_arg arg = {sne_vec_len(&os), sne_vec_len(&es), sne_vec_init()};
+				sne_vec_push(&as, arg);
 			} else if(paren == SNEXPR_PAREN_ALLOWED) {
-				struct expr_string str = {"(", 1};
-				vec_push(&os, str);
+				struct snexpr_string str = {"(", 1};
+				sne_vec_push(&os, str);
 			} else {
 				goto cleanup; // Bad call
 			}
 		} else if(paren == SNEXPR_PAREN_EXPECTED) {
 			goto cleanup; // Bad call
 		} else if(n == 1 && *tok == ')') {
-			int minlen = (vec_len(&as) > 0 ? vec_peek(&as).oslen : 0);
-			while(vec_len(&os) > minlen && *vec_peek(&os).s != '('
-					&& *vec_peek(&os).s != '{') {
-				struct expr_string str = vec_pop(&os);
-				if(expr_bind(str.s, str.n, &es) == -1) {
+			int minlen = (sne_vec_len(&as) > 0 ? sne_vec_peek(&as).oslen : 0);
+			while(sne_vec_len(&os) > minlen && *sne_vec_peek(&os).s != '('
+					&& *sne_vec_peek(&os).s != '{') {
+				struct snexpr_string str = sne_vec_pop(&os);
+				if(snexpr_bind(str.s, str.n, &es) == -1) {
 					goto cleanup;
 				}
 			}
-			if(vec_len(&os) == 0) {
+			if(sne_vec_len(&os) == 0) {
 				goto cleanup; // Bad parens
 			}
-			struct expr_string str = vec_pop(&os);
+			struct snexpr_string str = sne_vec_pop(&os);
 			if(str.n == 1 && *str.s == '{') {
-				str = vec_pop(&os);
-				struct expr_arg arg = vec_pop(&as);
-				if(vec_len(&es) > arg.eslen) {
-					vec_push(&arg.args, vec_pop(&es));
+				str = sne_vec_pop(&os);
+				struct snexpr_arg arg = sne_vec_pop(&as);
+				if(sne_vec_len(&es) > arg.eslen) {
+					sne_vec_push(&arg.args, sne_vec_pop(&es));
 				}
 				if(str.n == 1 && str.s[0] == '$') {
-					if(vec_len(&arg.args) < 1) {
-						vec_free(&arg.args);
+					if(sne_vec_len(&arg.args) < 1) {
+						sne_vec_free(&arg.args);
 						goto cleanup; /* too few arguments for $() function */
 					}
-					struct expr *u = &vec_nth(&arg.args, 0);
+					struct snexpr *u = &sne_vec_nth(&arg.args, 0);
 					if(u->type != SNE_OP_VAR) {
-						vec_free(&arg.args);
+						sne_vec_free(&arg.args);
 						goto cleanup; /* first argument is not a variable */
 					}
-					for(struct expr_var *v = vars->head; v; v = v->next) {
+					for(struct snexpr_var *v = vars->head; v; v = v->next) {
 						if(v == u->param.var.vref) {
 							struct macro m = {v->name, arg.args};
-							vec_push(&macros, m);
+							sne_vec_push(&macros, m);
 							break;
 						}
 					}
-					vec_push(&es, expr_constnum(0));
+					sne_vec_push(&es, snexpr_constnum(0));
 				} else {
 					int i = 0;
 					int found = -1;
 					struct macro m;
-					vec_foreach(&macros, m, i)
+					sne_vec_foreach(&macros, m, i)
 					{
 						if(strlen(m.name) == (size_t)str.n
 								&& strncmp(m.name, str.s, str.n) == 0) {
@@ -1122,40 +1122,40 @@ static struct expr *expr_create(const char *s, size_t len,
 						}
 					}
 					if(found != -1) {
-						m = vec_nth(&macros, found);
-						struct expr root = expr_constnum(0);
-						struct expr *p = &root;
+						m = sne_vec_nth(&macros, found);
+						struct snexpr root = snexpr_constnum(0);
+						struct snexpr *p = &root;
 						/* Assign macro parameters */
-						for(int j = 0; j < vec_len(&arg.args); j++) {
+						for(int j = 0; j < sne_vec_len(&arg.args); j++) {
 							char varname[4];
 							snprintf(varname, sizeof(varname) - 1, "$%d",
 									(j + 1));
-							struct expr_var *v =
-									expr_var(vars, varname, strlen(varname));
-							struct expr ev = expr_varref(v);
-							struct expr assign = expr_binary(
-									SNE_OP_ASSIGN, ev, vec_nth(&arg.args, j));
-							*p = expr_binary(
-									SNE_OP_COMMA, assign, expr_constnum(0));
-							p = &vec_nth(&p->param.op.args, 1);
+							struct snexpr_var *v =
+									snexpr_var(vars, varname, strlen(varname));
+							struct snexpr ev = snexpr_varref(v);
+							struct snexpr assign = snexpr_binary(
+									SNE_OP_ASSIGN, ev, sne_vec_nth(&arg.args, j));
+							*p = snexpr_binary(
+									SNE_OP_COMMA, assign, snexpr_constnum(0));
+							p = &sne_vec_nth(&p->param.op.args, 1);
 						}
 						/* Expand macro body */
-						for(int j = 1; j < vec_len(&m.body); j++) {
-							if(j < vec_len(&m.body) - 1) {
-								*p = expr_binary(SNE_OP_COMMA, expr_constnum(0),
-										expr_constnum(0));
-								expr_copy(&vec_nth(&p->param.op.args, 0),
-										&vec_nth(&m.body, j));
+						for(int j = 1; j < sne_vec_len(&m.body); j++) {
+							if(j < sne_vec_len(&m.body) - 1) {
+								*p = snexpr_binary(SNE_OP_COMMA, snexpr_constnum(0),
+										snexpr_constnum(0));
+								snexpr_copy(&sne_vec_nth(&p->param.op.args, 0),
+										&sne_vec_nth(&m.body, j));
 							} else {
-								expr_copy(p, &vec_nth(&m.body, j));
+								snexpr_copy(p, &sne_vec_nth(&m.body, j));
 							}
-							p = &vec_nth(&p->param.op.args, 1);
+							p = &sne_vec_nth(&p->param.op.args, 1);
 						}
-						vec_push(&es, root);
-						vec_free(&arg.args);
+						sne_vec_push(&es, root);
+						sne_vec_free(&arg.args);
 					} else {
-						struct expr_func *f = expr_func(funcs, str.s, str.n);
-						struct expr bound_func = expr_init();
+						struct snexpr_func *f = snexpr_func(funcs, str.s, str.n);
+						struct snexpr bound_func = snexpr_init();
 						bound_func.type = SNE_OP_FUNC;
 						bound_func.param.func.f = f;
 						bound_func.param.func.args = arg.args;
@@ -1166,45 +1166,45 @@ static struct expr *expr_create(const char *s, size_t len,
 							}
 							bound_func.param.func.context = p;
 						}
-						vec_push(&es, bound_func);
+						sne_vec_push(&es, bound_func);
 					}
 				}
 			}
 			paren_next = SNEXPR_PAREN_FORBIDDEN;
-		} else if(!isnan(num = expr_parse_number(tok, n))) {
-			vec_push(&es, expr_constnum(num));
+		} else if(!isnan(num = snexpr_parse_number(tok, n))) {
+			sne_vec_push(&es, snexpr_constnum(num));
 			paren_next = SNEXPR_PAREN_FORBIDDEN;
 		} else if(*tok == '"' || *tok == '\'') {
-			vec_push(&es, expr_conststr(tok, n));
+			sne_vec_push(&es, snexpr_conststr(tok, n));
 			paren_next = SNEXPR_PAREN_FORBIDDEN;
-		} else if(expr_op(tok, n, -1) != SNE_OP_UNKNOWN) {
-			enum expr_type op = expr_op(tok, n, -1);
-			struct expr_string o2 = {NULL, 0};
-			if(vec_len(&os) > 0) {
-				o2 = vec_peek(&os);
+		} else if(snexpr_op(tok, n, -1) != SNE_OP_UNKNOWN) {
+			enum snexpr_type op = snexpr_op(tok, n, -1);
+			struct snexpr_string o2 = {NULL, 0};
+			if(sne_vec_len(&os) > 0) {
+				o2 = sne_vec_peek(&os);
 			}
 			for(;;) {
-				if(n == 1 && *tok == ',' && vec_len(&os) > 0) {
-					struct expr_string str = vec_peek(&os);
+				if(n == 1 && *tok == ',' && sne_vec_len(&os) > 0) {
+					struct snexpr_string str = sne_vec_peek(&os);
 					if(str.n == 1 && *str.s == '{') {
-						struct expr e = vec_pop(&es);
-						vec_push(&vec_peek(&as).args, e);
+						struct snexpr e = sne_vec_pop(&es);
+						sne_vec_push(&sne_vec_peek(&as).args, e);
 						break;
 					}
 				}
-				enum expr_type type2 = expr_op(o2.s, o2.n, -1);
-				if(!(type2 != SNE_OP_UNKNOWN && expr_prec(op, type2))) {
-					struct expr_string str = {tok, n};
-					vec_push(&os, str);
+				enum snexpr_type type2 = snexpr_op(o2.s, o2.n, -1);
+				if(!(type2 != SNE_OP_UNKNOWN && snexpr_prec(op, type2))) {
+					struct snexpr_string str = {tok, n};
+					sne_vec_push(&os, str);
 					break;
 				}
 
-				if(expr_bind(o2.s, o2.n, &es) == -1) {
+				if(snexpr_bind(o2.s, o2.n, &es) == -1) {
 					goto cleanup;
 				}
-				(void)vec_pop(&os);
-				if(vec_len(&os) > 0) {
-					o2 = vec_peek(&os);
+				(void)sne_vec_pop(&os);
+				if(sne_vec_len(&os) > 0) {
+					o2 = sne_vec_peek(&os);
 				} else {
 					o2.n = 0;
 				}
@@ -1222,75 +1222,75 @@ static struct expr *expr_create(const char *s, size_t len,
 	}
 
 	if(idn > 0) {
-		vec_push(&es, expr_varref(expr_var(vars, id, idn)));
+		sne_vec_push(&es, snexpr_varref(snexpr_var(vars, id, idn)));
 	}
 
-	while(vec_len(&os) > 0) {
-		struct expr_string rest = vec_pop(&os);
+	while(sne_vec_len(&os) > 0) {
+		struct snexpr_string rest = sne_vec_pop(&os);
 		if(rest.n == 1 && (*rest.s == '(' || *rest.s == ')')) {
 			goto cleanup; // Bad paren
 		}
-		if(expr_bind(rest.s, rest.n, &es) == -1) {
+		if(snexpr_bind(rest.s, rest.n, &es) == -1) {
 			goto cleanup;
 		}
 	}
 
-	result = (struct expr *)calloc(1, sizeof(struct expr));
+	result = (struct snexpr *)calloc(1, sizeof(struct snexpr));
 	if(result != NULL) {
-		if(vec_len(&es) == 0) {
+		if(sne_vec_len(&es) == 0) {
 			result->type = SNE_OP_CONSTNUM;
 		} else {
-			*result = vec_pop(&es);
+			*result = sne_vec_pop(&es);
 		}
 	}
 
 	int i, j;
 	struct macro m;
-	struct expr e;
-	struct expr_arg a;
+	struct snexpr e;
+	struct snexpr_arg a;
 cleanup:
-	vec_foreach(&macros, m, i)
+	sne_vec_foreach(&macros, m, i)
 	{
-		struct expr e;
-		vec_foreach(&m.body, e, j)
+		struct snexpr e;
+		sne_vec_foreach(&m.body, e, j)
 		{
-			expr_destroy_args(&e);
+			snexpr_destroy_args(&e);
 		}
-		vec_free(&m.body);
+		sne_vec_free(&m.body);
 	}
-	vec_free(&macros);
+	sne_vec_free(&macros);
 
-	vec_foreach(&es, e, i)
+	sne_vec_foreach(&es, e, i)
 	{
-		expr_destroy_args(&e);
+		snexpr_destroy_args(&e);
 	}
-	vec_free(&es);
+	sne_vec_free(&es);
 
-	vec_foreach(&as, a, i)
+	sne_vec_foreach(&as, a, i)
 	{
-		vec_foreach(&a.args, e, j)
+		sne_vec_foreach(&a.args, e, j)
 		{
-			expr_destroy_args(&e);
+			snexpr_destroy_args(&e);
 		}
-		vec_free(&a.args);
+		sne_vec_free(&a.args);
 	}
-	vec_free(&as);
+	sne_vec_free(&as);
 
-	/*vec_foreach(&os, o, i) {vec_free(&m.body);}*/
-	vec_free(&os);
+	/*sne_vec_foreach(&os, o, i) {sne_vec_free(&m.body);}*/
+	sne_vec_free(&os);
 	return result;
 }
 
-static void expr_destroy_args(struct expr *e)
+static void snexpr_destroy_args(struct snexpr *e)
 {
 	int i;
-	struct expr arg;
+	struct snexpr arg;
 	if(e->type == SNE_OP_FUNC) {
-		vec_foreach(&e->param.func.args, arg, i)
+		sne_vec_foreach(&e->param.func.args, arg, i)
 		{
-			expr_destroy_args(&arg);
+			snexpr_destroy_args(&arg);
 		}
-		vec_free(&e->param.func.args);
+		sne_vec_free(&e->param.func.args);
 		if(e->param.func.context != NULL) {
 			if(e->param.func.f->cleanup != NULL) {
 				e->param.func.f->cleanup(
@@ -1299,23 +1299,23 @@ static void expr_destroy_args(struct expr *e)
 			free(e->param.func.context);
 		}
 	} else if(e->type != SNE_OP_CONSTNUM && e->type != SNE_OP_VAR) {
-		vec_foreach(&e->param.op.args, arg, i)
+		sne_vec_foreach(&e->param.op.args, arg, i)
 		{
-			expr_destroy_args(&arg);
+			snexpr_destroy_args(&arg);
 		}
-		vec_free(&e->param.op.args);
+		sne_vec_free(&e->param.op.args);
 	}
 }
 
-static void expr_destroy(struct expr *e, struct expr_var_list *vars)
+static void snexpr_destroy(struct snexpr *e, struct snexpr_var_list *vars)
 {
 	if(e != NULL) {
-		expr_destroy_args(e);
+		snexpr_destroy_args(e);
 		free(e);
 	}
 	if(vars != NULL) {
-		for(struct expr_var *v = vars->head; v;) {
-			struct expr_var *next = v->next;
+		for(struct snexpr_var *v = vars->head; v;) {
+			struct snexpr_var *next = v->next;
 			free(v);
 			v = next;
 		}
@@ -1326,4 +1326,4 @@ static void expr_destroy(struct expr *e, struct expr_var_list *vars)
 } /* extern "C" */
 #endif
 
-#endif /* EXPR_H */
+#endif /* _SNEXPR_H_ */
