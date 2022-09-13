@@ -407,8 +407,12 @@ static struct snexpr *snexpr_convert_num(float value, unsigned int ctype)
 
 static struct snexpr *snexpr_convert_stzl(char *value, size_t len, unsigned int ctype)
 {
-	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
-	if(e == NULL || value==NULL) {
+	struct snexpr *e = NULL;
+	if(value==NULL) {
+		return NULL;
+	}
+	e = (struct snexpr *)malloc(sizeof(struct snexpr));
+	if(e == NULL) {
 		return NULL;
 	}
 	memset(e, 0, sizeof(struct snexpr));
