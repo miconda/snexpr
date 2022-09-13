@@ -405,7 +405,7 @@ static struct snexpr *snexpr_convert_num(float value, unsigned int ctype)
 	return e;
 }
 
-static struct snexpr *snexpr_convert_stz(char *value, unsigned int ctype)
+static struct snexpr *snexpr_convert_stzl(char *value, size_t len, unsigned int ctype)
 {
 	struct snexpr *e = (struct snexpr *)malloc(sizeof(struct snexpr));
 	if(e == NULL || value==NULL) {
@@ -416,19 +416,29 @@ static struct snexpr *snexpr_convert_stz(char *value, unsigned int ctype)
 	if(ctype == SNE_OP_CONSTNUM) {
 		e->eflags |= SNEXPR_EXPALLOC;
 		e->type = SNE_OP_CONSTNUM;
-		e->param.num.nval = (float)atof(value);
+		e->param.num.nval = snexpr_parse_number(value, len);
 		return e;
 	}
 
-	e->param.stz.sval = (char *)malloc(strlen(value) + 1);
+	e->param.stz.sval = (char *)malloc(len + 1);
 	if(e->param.stz.sval == NULL) {
 		free(e);
 		return NULL;
 	}
 	e->eflags |= SNEXPR_EXPALLOC | SNEXPR_VALALLOC;
 	e->type = SNE_OP_CONSTSTZ;
-	strcpy(e->param.stz.sval, value);
+	memcpy(e->param.stz.sval, value, len);
+	e->param.stz.sval[len] = '\0';
 	return e;
+}
+
+static struct snexpr *snexpr_convert_stz(char *value, unsigned int ctype)
+{
+	if(value==NULL) {
+		return NULL;
+	}
+
+	return snexpr_convert_stzl(value, strlen(value), ctype);
 }
 
 static struct snexpr *snexpr_concat_strz(char *value0, char *value1)
