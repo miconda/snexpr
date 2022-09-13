@@ -31,11 +31,30 @@
 #include <sys/time.h>
 
 
+static struct snexpr* snexpr_extval_cbf(char *vname)
+{
+	struct snexpr *e = NULL;
+
+	if(vname==NULL) {
+		return NULL;
+	}
+
+	if(strcmp(vname, "S1")==0) {
+		e = snexpr_convert_stz("abc", SNE_OP_CONSTSTZ);
+	} else if(strcmp(vname, "N1")==0) {
+		e = snexpr_convert_num(10, SNE_OP_CONSTNUM);
+	} else {
+		e = snexpr_convert_num(0, SNE_OP_CONSTNUM);
+	}
+
+	return e;
+}
+
 static void snexpr_test_num(char *s, float expected)
 {
 	char *p = NULL;
 	struct snexpr_var_list vars = {0};
-	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL, snexpr_extval_cbf);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
@@ -81,7 +100,7 @@ static void snexpr_test_stz(char *s, char *expected)
 {
 	char *p = NULL;
 	struct snexpr_var_list vars = {0};
-	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL, snexpr_extval_cbf);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
@@ -128,7 +147,7 @@ static void snexpr_test_bool(char *s, int expected)
 	char *p = NULL;
 	int b = 0;
 	struct snexpr_var_list vars = {0};
-	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL);
+	struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL, NULL);
 	if(e == NULL) {
 		printf("FAIL: %s returned NULL\n", s);
 		return;
@@ -204,6 +223,7 @@ int main(int argc, char *argv[])
 	snexpr_test_stz("\"1\"+\"2\"", "12");
 	snexpr_test_stz("\"3\"+4", "34");
 	snexpr_test_stz("s=\"4\",s=s+\"5\"", "45");
+	snexpr_test_stz("S1+\"d\"", "abcd");
 
 	printf("\n");
 
