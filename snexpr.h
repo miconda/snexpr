@@ -49,6 +49,7 @@ extern "C" {
 #define SNEXPR_COMMA (1 << 17)
 #define SNEXPR_EXPALLOC (1 << 18)
 #define SNEXPR_VALALLOC (1 << 19)
+#define SNEXPR_VALASSIGN (1 << 20)
 
 
 /*
@@ -148,6 +149,10 @@ typedef sne_vec(struct snexpr) sne_vec_expr_t;
 typedef void (*snexprfn_cleanup_t)(struct snexpr_func *f, void *context);
 typedef struct snexpr* (*snexprfn_t)(struct snexpr_func *f, sne_vec_expr_t *args, void *context);
 
+typedef struct snexpr* (*snexternval_cbf_t)(char *vname);
+
+static snexternval_cbf_t _snexternval_cbf = NULL;
+
 struct snexpr
 {
 	enum snexpr_type type;
@@ -208,8 +213,8 @@ static int snexpr_is_unary(enum snexpr_type op)
 
 static int snexpr_is_binary(enum snexpr_type op)
 {
-	return !snexpr_is_unary(op) && op != SNE_OP_CONSTNUM && op != SNE_OP_VAR
-		   && op != SNE_OP_FUNC && op != SNE_OP_UNKNOWN;
+	return !snexpr_is_unary(op) && op != SNE_OP_CONSTNUM && op != SNE_OP_CONSTSTZ
+		 && op != SNE_OP_VAR && op != SNE_OP_FUNC && op != SNE_OP_UNKNOWN;
 }
 
 static int snexpr_prec(enum snexpr_type a, enum snexpr_type b)
@@ -311,7 +316,7 @@ struct snexpr_func
 	size_t ctxsz;
 };
 
-static struct snexpr_func *snexpr_func(
+static struct snexpr_func *snexpr_func_find(
 		struct snexpr_func *funcs, const char *s, size_t len)
 {
 	for(struct snexpr_func *f = funcs; f->name; f++) {
@@ -342,7 +347,7 @@ struct snexpr_var_list
 	struct snexpr_var *head;
 };
 
-static struct snexpr_var *snexpr_var(
+static struct snexpr_var *snexpr_var_find(
 		struct snexpr_var_list *vars, const char *s, size_t len)
 {
 	struct snexpr_var *v = NULL;
@@ -705,11 +710,12 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 				}
 				if(rv1->type == SNE_OP_CONSTSTZ) {
 					e->param.op.args.buf[0].param.var.vref->v.sval = strdup(rv1->param.stz.sval);
-					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_TSTRING|SNEXPR_VALALLOC;
+					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_VALASSIGN|SNEXPR_TSTRING|SNEXPR_VALALLOC;
 					lv = snexpr_convert_stz(rv1->param.stz.sval, SNE_OP_CONSTSTZ);
 				} else {
 					n = rv1->param.num.nval;
 					e->param.op.args.buf[0].param.var.vref->v.nval = n;
+					e->param.op.args.buf[0].param.var.vref->evflags |= SNEXPR_VALASSIGN;
 					lv = snexpr_convert_num(n, SNE_OP_CONSTNUM);
 				}
 			}
@@ -730,10 +736,15 @@ static struct snexpr *snexpr_eval(struct snexpr *e)
 			lv = snexpr_convert_stz(e->param.stz.sval, SNE_OP_CONSTSTZ);
 			goto done;
 		case SNE_OP_VAR:
-			if(e->param.var.vref->evflags & SNEXPR_TSTRING) {
-				lv = snexpr_convert_stz(e->param.var.vref->v.sval, SNE_OP_CONSTSTZ);
+			if((_snexternval_cbf == NULL)
+					|| (e->param.var.vref->evflags & SNEXPR_VALASSIGN)) {
+				if(e->param.var.vref->evflags & SNEXPR_TSTRING) {
+					lv = snexpr_convert_stz(e->param.var.vref->v.sval, SNE_OP_CONSTSTZ);
+				} else {
+					snexpr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
+				}
 			} else {
-				lv = snexpr_convert_num(e->param.var.vref->v.nval, SNE_OP_CONSTNUM);
+				lv = _snexternval_cbf(e->param.var.vref->name);
 			}
 			goto done;
 		case SNE_OP_FUNC:
@@ -994,7 +1005,8 @@ static inline void snexpr_copy(struct snexpr *dst, struct snexpr *src)
 static void snexpr_destroy_args(struct snexpr *e);
 
 static struct snexpr *snexpr_create(const char *s, size_t len,
-		struct snexpr_var_list *vars, struct snexpr_func *funcs)
+		struct snexpr_var_list *vars, struct snexpr_func *funcs,
+		snexternval_cbf_t evcbf)
 {
 	float num;
 	struct snexpr_var *v;
@@ -1002,6 +1014,8 @@ static struct snexpr *snexpr_create(const char *s, size_t len,
 	size_t idn = 0;
 
 	struct snexpr *result = NULL;
+
+	_snexternval_cbf = evcbf;
 
 	sne_vec_expr_t es = sne_vec_init();
 	sne_vec_str_t os = sne_vec_init();
@@ -1070,14 +1084,14 @@ static struct snexpr *snexpr_create(const char *s, size_t len,
 					}
 				}
 				if((idn == 1 && id[0] == '$') || has_macro
-						|| snexpr_func(funcs, id, idn) != NULL) {
+						|| snexpr_func_find(funcs, id, idn) != NULL) {
 					struct snexpr_string str = {id, (int)idn};
 					sne_vec_push(&os, str);
 					paren = SNEXPR_PAREN_EXPECTED;
 				} else {
 					goto cleanup; /* invalid function name */
 				}
-			} else if((v = snexpr_var(vars, id, idn)) != NULL) {
+			} else if((v = snexpr_var_find(vars, id, idn)) != NULL) {
 				sne_vec_push(&es, snexpr_varref(v));
 				paren = SNEXPR_PAREN_FORBIDDEN;
 			}
@@ -1157,7 +1171,7 @@ static struct snexpr *snexpr_create(const char *s, size_t len,
 							snprintf(varname, sizeof(varname) - 1, "$%d",
 									(j + 1));
 							struct snexpr_var *v =
-									snexpr_var(vars, varname, strlen(varname));
+									snexpr_var_find(vars, varname, strlen(varname));
 							struct snexpr ev = snexpr_varref(v);
 							struct snexpr assign = snexpr_binary(
 									SNE_OP_ASSIGN, ev, sne_vec_nth(&arg.args, j));
@@ -1180,7 +1194,7 @@ static struct snexpr *snexpr_create(const char *s, size_t len,
 						sne_vec_push(&es, root);
 						sne_vec_free(&arg.args);
 					} else {
-						struct snexpr_func *f = snexpr_func(funcs, str.s, str.n);
+						struct snexpr_func *f = snexpr_func_find(funcs, str.s, str.n);
 						struct snexpr bound_func = snexpr_init();
 						bound_func.type = SNE_OP_FUNC;
 						bound_func.param.func.f = f;
@@ -1248,7 +1262,7 @@ static struct snexpr *snexpr_create(const char *s, size_t len,
 	}
 
 	if(idn > 0) {
-		sne_vec_push(&es, snexpr_varref(snexpr_var(vars, id, idn)));
+		sne_vec_push(&es, snexpr_varref(snexpr_var_find(vars, id, idn)));
 	}
 
 	while(sne_vec_len(&os) > 0) {
@@ -1304,6 +1318,10 @@ cleanup:
 
 	/*sne_vec_foreach(&os, o, i) {sne_vec_free(&m.body);}*/
 	sne_vec_free(&os);
+	if(result==NULL) {
+		_snexternval_cbf = NULL;
+	}
+
 	return result;
 }
 
@@ -1324,7 +1342,8 @@ static void snexpr_destroy_args(struct snexpr *e)
 			}
 			free(e->param.func.context);
 		}
-	} else if(e->type != SNE_OP_CONSTNUM && e->type != SNE_OP_VAR) {
+	} else if(e->type != SNE_OP_CONSTNUM && e->type != SNE_OP_CONSTSTZ
+			&& e->type != SNE_OP_VAR) {
 		sne_vec_foreach(&e->param.op.args, arg, i)
 		{
 			snexpr_destroy_args(&arg);
@@ -1335,6 +1354,8 @@ static void snexpr_destroy_args(struct snexpr *e)
 
 static void snexpr_destroy(struct snexpr *e, struct snexpr_var_list *vars)
 {
+	_snexternval_cbf = NULL;
+
 	if(e != NULL) {
 		snexpr_destroy_args(e);
 		free(e);
