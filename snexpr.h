@@ -799,6 +799,7 @@ static int snexpr_next_token(const char *s, size_t len, int *flags)
 {
 	unsigned int i = 0;
 	char b;
+	int bsf = 0;
 	if(len == 0) {
 		return 0;
 	}
@@ -845,7 +846,12 @@ static int snexpr_next_token(const char *s, size_t len, int *flags)
 		b = c;
 		i++;
 		c = s[i];
-		while(c != b && i < len) {
+		while(i < len && (bsf==1 || c != b)) {
+			if(bsf == 0 && c == '\\') {
+				bsf = 1;
+			} else {
+				bsf = 0;
+			}
 			i++;
 			c = s[i];
 		}
