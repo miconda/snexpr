@@ -29,7 +29,18 @@ Examples:
 "mno prs"
 ```
 
-Note: at this moment support for escaped characters is not implemented.
+It has also support for escaped characters:
+
+  - `\n` - new line
+  - `\r` - carriage return
+  - `\t` - horizontal tab
+  - any other `\c` sequence is replaced with `c` (e.g., `\"` is set to `"`)
+
+Example:
+
+```
+"abc\"def" is set to `abc"cde`
+```
 
 ## Implemented Operators ##
 
