@@ -50,3 +50,24 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# tags
+tags
+TAGS
+.tags*
+# vi swaps
+.*.swp
+.*.swo
+
+# Emacs backup files
+*~
+# Emacs file locks
+.#*
+# Emacs desktop files
+.emacs.desktop*
+
+# vscode tmp files
+.vscode
+
+# test binary
+/test/tsnexpr
