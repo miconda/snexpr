@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 	snexpr_test_stz("\"3\"+4", "34");
 	snexpr_test_stz("s=\"4\",s=s+\"5\"", "45");
 	snexpr_test_stz("S1+\"d\"", "abcd");
-	snexpr_test_stz("\"3\"+\"4\\\"5\"", "34\\\"5");
+	snexpr_test_stz("\"3\"+\"4\\\"5\"", "34\"5");
 
 	printf("\n");
 
