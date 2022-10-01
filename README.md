@@ -123,6 +123,55 @@ Comparison for two strings is done internally using the C function `strcmp()`:
 Comparison between a number and a string (or vice-versa) is done using auto-conversion
 of the right operand.
 
+## Usage ##
+
+Include `snexpr.h` in your `.c/.cpp` file, the use the functions to create and
+evaluate expressions from a string.
+
+Simple example to evaluate an arithmetic expression:
+
+```c
+#include "snexpr.h"
+
+#include <stdio.h>
+
+int main(int argc, char *argv[])
+{
+  char *s = "(2+3)*4";
+  struct snexpr_var_list vars = {0};
+  struct snexpr *e = snexpr_create(s, strlen(s), &vars, NULL, NULL);
+
+  if(e == NULL) {
+    printf("FAIL: creaing %s returned NULL\n", s);
+    return -1;
+  }
+
+  struct snexpr *result = snexpr_eval(e);
+
+  if(result==NULL) {
+    printf("FAIL: result is NULL\n");
+    snexpr_destroy(e, &vars);
+    return -1;
+  }
+
+  if(result->type != SNE_OP_CONSTNUM) {
+    printf("FAIL: result is not a number (%d!=%d)\n", result->type, SNE_OP_CONSTNUM);
+    snexpr_result_free(result);
+    snexpr_destroy(e, &vars);
+    return 1;
+  }
+
+  printf("OK: result of '%s' is %f\n", s, result->param.num.nval);
+
+  snexpr_result_free(result);
+  snexpr_destroy(e, &vars);
+
+  return 0;
+}
+```
+
+See more examples in `test/tsnexpr.c`.
+
 ## Credits ##
 
 Project started from:
