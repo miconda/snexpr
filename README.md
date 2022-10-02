@@ -126,7 +126,19 @@ of the right operand.
 ## Usage ##
 
 Include `snexpr.h` in your `.c/.cpp` file, the use the functions to create and
-evaluate expressions from a string.
+evaluate expressions from a string. Main functions:
+
+  * `struct snexpr *snexpr_create(const char *s, size_t len, struct snexpr_var_list *vars struct snexpr_func *funcs, snexternval_cbf_t evcbf)` - create an expression provided
+  inside string `s` that has the length `len`, setting the environment with a list
+  of local variables and functions, plus a callback to get the values for external
+  variables.
+  * `struct snexpr *snexpr_eval(struct snexpr *e)` - evaluate the expression, returning
+  `NULL` on error, otherwise it should be a pointer to a new expression that holds:
+    * a string value: `char *` in `result->param.stz.sval` when `result->type==SNE_OP_CONSTSTZ`
+    * a number value: `float` in result->param.num.nval when `result->type==SNE_OP_CONSTNUM`
+  * `void snexpr_result_free(struct snexpr *e)` - free the result of expression evaluation
+  * `void snexpr_destroy_args(struct snexpr *e)` - destroy the created expression
+
 
 Simple example to evaluate an arithmetic expression:
 
