@@ -1,6 +1,6 @@
 # SNExpr #
 
-Strings and numbers expression evaluation with auto-conversion.
+Strings and numbers expression evaluation with auto-conversion for C/C++.
 
 Examples:
 
@@ -121,7 +121,7 @@ Comparison for two strings is done internally using the C function `strcmp()`:
   - if the result of `strcmp()` is zero, the two strings are equal
 
 Comparison between a number and a string (or vice-versa) is done using auto-conversion
-of the right operand.
+of the left operand.
 
 ## Usage ##
 
